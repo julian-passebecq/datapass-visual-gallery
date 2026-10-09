@@ -1,5 +1,5 @@
 {
-  "name": "datapass-visual-gallery",
+  "name": "datapass-visual-gallery-preview",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-09",
   "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
@@ -8,8 +8,8 @@
     { "binding": "WEB_ASSETS", "bucket_name": "datapass-web-assets" }
   ],
   "vars": {
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": "",
-    "PUBLIC_ORIGIN": ""
+    "ACCESS_TEAM_DOMAIN": "https://proud-cell-ad39.cloudflareaccess.com",
+    "ACCESS_AUD": "9302a8fdccc19ca68357dc0ce8c6a038953f8d9c2557cc6efd2fe989338dc823",
+    "PUBLIC_ORIGIN": "https://datapass-visual-gallery-preview.datapass.workers.dev"
   }
 }
