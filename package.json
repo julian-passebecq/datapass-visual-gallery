@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.7.0",
-    "@cloudflare/workers-types": "^4.20260901.0",
+    "@cloudflare/workers-types": "^4.20260201.0",
     "jose": "^6.1.0",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
@@ -22,5 +22,8 @@
     "typescript": "^5.9.0",
     "wrangler": "^4.0.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0"
+  }
 }
