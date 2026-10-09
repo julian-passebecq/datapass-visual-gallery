@@ -1,0 +1,10 @@
+id,version,surface,experience,acceptance,status
+DVG-UX-001,V1,Web gallery,Responsive source navigation and grid/list gallery,usable desktop and mobile,IMPLEMENTED_UNQUALIFIED
+DVG-UX-002,V1,Web search,Search bar and query filter with feedback,live results or explicit error no fake placeholders,IMPLEMENTED_UNQUALIFIED
+DVG-UX-003,V1,Web viewer,Full-size lightbox with next previous close,keyboard escape and private asset support,IMPLEMENTED_UNQUALIFIED
+DVG-UX-004,V1,Selections,Select deselect export and clear,manifest includes provenance and never publishes,IMPLEMENTED_UNQUALIFIED
+DVG-UX-005,V1,Collections,Named persistent visual boards,create rename delete assign across devices,OPEN
+DVG-UX-006,V1,Create/import,Import generated image with classification,only approved stored image appears,OPEN
+DVG-UX-007,V1,Edge,Search capture and open from existing extension,non-destructive integration and user consent,OPEN
+DVG-UX-008,V1,Security,Private images never exposed to anonymous user,Access token negative tests and browser network verification,OPEN
+DVG-UX-009,V1,Gallery performance,Optimized thumbnails and pagination,large originals not fetched as grid thumbnails,OPEN

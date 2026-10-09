@@ -1,0 +1,14 @@
+id,version,feature,acceptance,implementation_status,evidence_or_blocker
+DVG-001,V1,Authenticated private gallery,Every static and media route verifies Access JWT and rejects missing configuration,IMPLEMENTED_UNQUALIFIED,worker/index.ts;live Access policy pending
+DVG-002,V1,Private and approved asset sources,Source filters resolve only existing R2 buckets and never publish originals,IMPLEMENTED_UNQUALIFIED,worker/index.ts
+DVG-003,V1,Responsive visual browse,Grid/list and lightbox render real R2 media with filenames and source,IMPLEMENTED_UNQUALIFIED,src/App.tsx;real user journey pending
+DVG-004,V1,Selection and deselection,Multiple images can be selected and deselected and exported with exact R2 keys,IMPLEMENTED_UNQUALIFIED,src/App.tsx
+DVG-005,V1,Favorites and collections,Favorites and user-created named collections persist across authenticated devices,PARTIAL,local favorites only;shared persistence missing
+DVG-006,V1,Search and relevance,Text and semantic Mongo-backed retrieval return exact reference IDs with provenance,PARTIAL,R2 key search only;Mongo adapter missing
+DVG-007,V1,Image rendering,Optimized thumbnails with bounded sizes and download controls meet performance requirement,PARTIAL,original images scaled client-side;Images binding missing
+DVG-008,V1,Image creation intake,Authorized generated images can be imported and explicitly classified before archive,NOT_STARTED,authenticated ingest adapter needed
+DVG-009,V1,Controlled publishing,Explicit selected-item publication to approved asset bucket with verification and rollback,NOT_STARTED,separate security/approval gate
+DVG-010,V1,Edge integration,Existing extension preserves workspace behavior and opens shared gallery with explicit permissions,NOT_STARTED,extension ownership verification and review
+DVG-011,V1,Release validation,CI build tests auth negative test and one real authenticated end-to-end image journey all pass,NOT_QUALIFIED,live environment tests pending
+DVG-012,V2,Visual similarity,R&D image embeddings if deterministic ranking insufficient,NOT_STARTED,R&D only
+DVG-013,V2,Windows intake,Explicit file imports through qualified optional native bridge,NOT_STARTED,Rust bridge ping-only baseline
