@@ -19,3 +19,6 @@ jobs:
       - run: npm run build
       - name: Validate Worker bundle without deploying
         run: npx wrangler deploy --dry-run --outdir .wrangler/compiled
+
+      - name: Package owner-protected preview Worker (public source only)
+        run: npm run package:connector -- --emit
