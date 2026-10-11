@@ -22,17 +22,17 @@ function itemOf(o:R2Object,source:Source):Item{
  const key=o.key;const actual:Source=source==='private'&&key.startsWith('originals/gallery-import/')?'generated':source;
  return {id:actual+':'+key,source:actual,key,title:safeTitle(key),size:o.size,uploaded:o.uploaded?.toISOString(),mime:MIME[extension(key)]||'application/octet-stream',url:'/api/file/'+(actual==='generated'?'private':actual)+'/'+key.split('/').map(encodeURIComponent).join('/')};
 }
-async function authenticated(request:Request,env:Env):Promise<string|null>{
- if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD)return null;
+async function authenticated(request:Request,env:Env):Promise<string|false>{
+ if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD)return false;
  const jwt=request.headers.get('Cf-Access-Jwt-Assertion');
- if(!jwt)return null;
+ if(!jwt)return false;
  try{
   const team=new URL(env.ACCESS_TEAM_DOMAIN);
-  if(team.protocol!=='https:'||!team.hostname.endsWith('.cloudflareaccess.com'))return null;
+  if(team.protocol!=='https:'||!team.hostname.endsWith('.cloudflareaccess.com'))return false;
   const jwks=createRemoteJWKSet(new URL('/cdn-cgi/access/certs',team));
   const {payload}=await jwtVerify(jwt,jwks,{issuer:team.origin,audience:env.ACCESS_AUD,algorithms:['RS256','ES256']});
-  return typeof payload.sub==='string'&&payload.sub?payload.sub:null;
- }catch{return null}
+  return typeof payload.sub==='string'&&payload.sub?payload.sub:false;
+ }catch{return false}
 }
 async function list(request:Request,env:Env){
  const p=new URL(request.url).searchParams;
