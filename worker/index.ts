@@ -3,7 +3,7 @@ import { queryCatalog, getCollections, putCollections, importImage } from './lib
 import type { GalleryEnv } from './library';
 
 interface Env extends GalleryEnv {
- ASSETS:Fetcher;
+ PRIVATE_MEDIA:R2Bucket;WEB_ASSETS:R2Bucket;ASSETS:Fetcher;
  ACCESS_TEAM_DOMAIN:string;ACCESS_AUD:string;PUBLIC_ORIGIN?:string;
 }
 type Source='private'|'public'|'generated';
