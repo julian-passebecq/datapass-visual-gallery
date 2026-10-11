@@ -24,6 +24,7 @@ function App(){
  const [selected,setSelected]=useState<Set<string>>(()=>new Set([...readSet('dvl:selected:v1'),...Object.keys(readRecords())]));
  const [selectedRecords,setSelectedRecords]=useState<Record<string,MediaItem>>(readRecords);
  const [favorites,setFavorites]=useState<Set<string>>(()=>readSet('dvl:favorites:v1'));
+ const [legacyFavoritesPending,setLegacyFavoritesPending]=useState(false);
  const [collections,setCollections]=useState<CollectionState>(emptyState),[collectionsLoaded,setCollectionsLoaded]=useState(false),[collectionBusy,setCollectionBusy]=useState(false),[collectionError,setCollectionError]=useState('');
  const [activeCollection,setActiveCollection]=useState(''),[newCollection,setNewCollection]=useState(''),[editingCollection,setEditingCollection]=useState(''),[editingName,setEditingName]=useState('');
  const [references,setReferences]=useState<ReferenceMatch[]>([]),[snapshotAt,setSnapshotAt]=useState(''),[searchError,setSearchError]=useState(''),[searchBusy,setSearchBusy]=useState(false);
@@ -51,7 +52,15 @@ function App(){
   const res=await fetch('/api/collections',{credentials:'same-origin',cache:'no-store'});
   if(!res.ok)throw new Error('Collections unavailable ('+res.status+')');
   const state=await res.json() as CollectionState;
-  if(!cancelled){setCollections(state);setFavorites(new Set(state.favorites));setCollectionsLoaded(true);setActiveCollection(v=>v||state.collections[0]?.id||'')}
+  if(!cancelled){
+   // Keep legacy browser favorites until the owner explicitly synchronizes them.
+   const local=readSet('dvl:favorites:v1');
+   const migrated=localStorage.getItem('dvl:favorites-migrated:v1')==='1';
+   const extra=!migrated?[...local].filter(x=>!state.favorites.includes(x)):[];
+   setCollections(state);setFavorites(new Set([...state.favorites,...extra]));
+   setLegacyFavoritesPending(extra.length>0);
+   setCollectionsLoaded(true);setActiveCollection(v=>v||state.collections[0]?.id||'');
+ }
  }catch(e){if(!cancelled){setCollectionError(readableError(e));setCollectionsLoaded(false)}}})();return()=>{cancelled=true}},[]);
  useEffect(()=>{let cancelled=false;
   if(!query.trim()||tab==='public'){setReferences([]);setSearchError('');return}
@@ -95,7 +104,9 @@ function App(){
    const res=await fetch('/api/collections',{method:'PUT',credentials:'same-origin',headers:{'content-type':'application/json','if-match':collections.revision},body:JSON.stringify({collections:next,favorites:[...nextFavorites]})});
    if(!res.ok){const obj=await res.json().catch(()=>({error:'Collection save failed'}));throw new Error(obj.error||'Collection save failed ('+res.status+')')}
    const state=await res.json() as CollectionState;
-   setCollections(state);setFavorites(new Set(state.favorites));return state;
+   setCollections(state);setFavorites(new Set(state.favorites));
+   localStorage.setItem('dvl:favorites-migrated:v1','1');setLegacyFavoritesPending(false);
+   return state;
   }catch(e){setCollectionError(readableError(e));throw e}
   finally{setCollectionBusy(false)}
  }
@@ -159,6 +170,7 @@ function App(){
     <button aria-label="Filters" className="tool" onClick={()=>setShowFilters(x=>!x)}><Filter size={17}/></button>
     <button aria-label="Toggle layout" className="tool" onClick={()=>setListMode(x=>!x)}>{listMode?<Grid2X2 size={17}/>:<List size={17}/>}</button>
     <button className="import-button" onClick={()=>setShowImport(x=>!x)}><Upload size={16}/> Import</button>
+    {legacyFavoritesPending&&<button className="import-button" disabled={collectionBusy||!collectionsLoaded} onClick={()=>void persist(collections.collections,favorites).then(()=>setNotice('Your existing local favorites are now synchronized across devices.')).catch(()=>{})}><Star size={16}/> Sync local favorites</button>}
    </div>
    {showFilters&&<div className="filters"><label>Media type <select value={kind} onChange={e=>setKind(e.target.value)}><option value="all">All files</option><option value="image">Images</option><option value="video">Video</option><option value="other">Other files</option></select></label><span>Filename search uses R2 keys. Reference search ranks MongoDB snapshot descriptions and tags; it is not vector search.</span></div>}
    {notice&&<div className="notice" role="status"><span>{notice}</span><button onClick={()=>setNotice('')} aria-label="Dismiss notice"><X size={14}/></button></div>}
