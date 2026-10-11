@@ -1,10 +1,12 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { queryCatalog, getCollections, putCollections, importImage } from './library';
+import type { GalleryEnv } from './library';
 
-interface Env {
- PRIVATE_MEDIA:R2Bucket;WEB_ASSETS:R2Bucket;ASSETS:Fetcher;
+interface Env extends GalleryEnv {
+ ASSETS:Fetcher;
  ACCESS_TEAM_DOMAIN:string;ACCESS_AUD:string;PUBLIC_ORIGIN?:string;
 }
-type Source='private'|'public';
+type Source='private'|'public'|'generated';
 interface Item { id:string;source:Source;key:string;title:string;size:number;uploaded?:string;mime:string;url:string }
 const MIME:Record<string,string>={png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp',gif:'image/gif',svg:'image/svg+xml',avif:'image/avif',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime'};
 const allowedExtensions=new Set(Object.keys(MIME));
@@ -12,24 +14,24 @@ function json(data:unknown,status=200){return new Response(JSON.stringify(data),
 function extension(key:string){return key.split('.').pop()?.toLowerCase()||''}
 function validMedia(key:string){return allowedExtensions.has(extension(key))}
 function safeTitle(key:string){return key.split('/').filter(Boolean).at(-1)||key}
-function exactOrigin(url:string,configured?:string){if(!configured)return true;try{return new URL(url).origin===new URL(configured).origin}catch{return false}}
-function bucketOf(env:Env,source:Source){return source==='private'?env.PRIVATE_MEDIA:env.WEB_ASSETS}
-function parseSource(s:string|null):Source|'all'|null{return s===null||s==='all'?'all':s==='private'||s==='public'?s:null}
+function exactOrigin(url:string,configured?:string){if(!configured)return true;try{return new URL(url).origin===new URL(configured).origin}catch{return null}}
+function bucketOf(env:Env,source:Source){return source==='public'?env.WEB_ASSETS:env.PRIVATE_MEDIA}
+function parseSource(s:string|null):Source|'all'|null{return s===null||s==='all'?'all':s==='private'||s==='public'||s==='generated'?s:null}
 function sourceFromEncoded(s:string):Source|null {return s==='private'||s==='public'?s:null}
 function itemOf(o:R2Object,source:Source):Item{
- const key=o.key;
- return {id:source+':'+key,source,key,title:safeTitle(key),size:o.size,uploaded:o.uploaded?.toISOString(),mime:MIME[extension(key)]||'application/octet-stream',url:'/api/file/'+source+'/'+key.split('/').map(encodeURIComponent).join('/')};
+ const key=o.key;const actual:Source=source==='private'&&key.startsWith('originals/gallery-import/')?'generated':source;
+ return {id:actual+':'+key,source:actual,key,title:safeTitle(key),size:o.size,uploaded:o.uploaded?.toISOString(),mime:MIME[extension(key)]||'application/octet-stream',url:'/api/file/'+(actual==='generated'?'private':actual)+'/'+key.split('/').map(encodeURIComponent).join('/')};
 }
-async function authenticated(request:Request,env:Env):Promise<boolean>{
- if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD)return false;
+async function authenticated(request:Request,env:Env):Promise<string|null>{
+ if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD)return null;
  const jwt=request.headers.get('Cf-Access-Jwt-Assertion');
- if(!jwt)return false;
+ if(!jwt)return null;
  try{
   const team=new URL(env.ACCESS_TEAM_DOMAIN);
-  if(team.protocol!=='https:'||!team.hostname.endsWith('.cloudflareaccess.com'))return false;
+  if(team.protocol!=='https:'||!team.hostname.endsWith('.cloudflareaccess.com'))return null;
   const jwks=createRemoteJWKSet(new URL('/cdn-cgi/access/certs',team));
   const {payload}=await jwtVerify(jwt,jwks,{issuer:team.origin,audience:env.ACCESS_AUD,algorithms:['RS256','ES256']});
-  return Boolean(payload.sub);
+  return typeof payload.sub==='string'&&payload.sub?payload.sub:null;
  }catch{return false}
 }
 async function list(request:Request,env:Env){
@@ -39,7 +41,7 @@ async function list(request:Request,env:Env){
  const q=(p.get('q')||'').toLowerCase().slice(0,200);
  const cursor=p.get('cursor')||'';
  let state:{s:Source;c?:string}|undefined;
- if(cursor){try{const parsed=JSON.parse(atob(cursor));if(!['private','public'].includes(parsed.s)||typeof parsed.c!=='string')throw 0;state=parsed}catch{return json({error:'Invalid cursor'},400)}}
+ if(cursor){try{const parsed=JSON.parse(atob(cursor));if(!['private','public','generated'].includes(parsed.s)||typeof parsed.c!=='string')throw 0;state=parsed}catch{return json({error:'Invalid cursor'},400)}}
  const sources:Source[]=source==='all'?['private','public']:[source];
  if(state&&!sources.includes(state.s))return json({error:'Cursor/source mismatch'},400);
  let offset=state?Math.max(0,sources.indexOf(state.s)):0;
@@ -49,7 +51,7 @@ async function list(request:Request,env:Env){
   const s=sources[offset],bucket=bucketOf(env,s);
   let c=state?.s===s?state.c:undefined;
   for(let pages=0;pages<10&&items.length<limit;pages++){
-   const page=await bucket.list({limit:Math.min(1000,Math.max(100,limit*3)),cursor:c});
+   const page=await bucket.list({limit:Math.min(1000,Math.max(100,limit*3)),cursor:c,...(s==='generated'?{prefix:'originals/gallery-import/'}:{})});
    for(const o of page.objects){if(validMedia(o.key)&&(!q||o.key.toLowerCase().includes(q)))items.push(itemOf(o,s));if(items.length>=limit)break}
    // Advance at page boundaries to avoid silently skipping items.
    if(items.length>=limit){
@@ -83,10 +85,15 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
  try{
   const url=new URL(request.url);
   if(!exactOrigin(request.url,env.PUBLIC_ORIGIN))return json({error:'Unknown origin'},403);
-  if(!await authenticated(request,env))return json({error:'Access authentication required; worker is closed until configured'},401);
+  const subject=await authenticated(request,env);
+  if(!subject)return json({error:'Access authentication required; worker is closed until configured'},401);
+  if(url.pathname==='/api/import'&&request.method==='POST')return importImage(request,env);
+  if(url.pathname==='/api/collections'&&request.method==='GET')return getCollections(env,subject);
+  if(url.pathname==='/api/collections'&&request.method==='PUT')return putCollections(request,env,subject);
   if(request.method!=='GET'&&request.method!=='HEAD')return json({error:'Method not allowed'},405);
-  if(url.pathname==='/api/health')return json({ok:true,authenticated:true,storage:['private','public']});
-  if(url.pathname==='/api/media')return list(request,env);
+  if(url.pathname==='/api/health')return json({ok:true,authenticated:true,storage:['private','public'],catalog:Boolean(env.CATALOG)});
+  if(url.pathname==='/api/references'&&request.method==='GET')return queryCatalog(request,env);
+  if(url.pathname==='/api/media'&&request.method==='GET')return list(request,env);
   if(url.pathname.startsWith('/api/file/'))return file(request,env,url.pathname.slice('/api/file/'.length));
   if(url.pathname.startsWith('/api/'))return json({error:'Not found'},404);
   return env.ASSETS.fetch(request);
