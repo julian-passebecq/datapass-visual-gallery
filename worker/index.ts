@@ -14,7 +14,7 @@ function json(data:unknown,status=200){return new Response(JSON.stringify(data),
 function extension(key:string){return key.split('.').pop()?.toLowerCase()||''}
 function validMedia(key:string){return allowedExtensions.has(extension(key))}
 function safeTitle(key:string){return key.split('/').filter(Boolean).at(-1)||key}
-function exactOrigin(url:string,configured?:string){if(!configured)return true;try{return new URL(url).origin===new URL(configured).origin}catch{return null}}
+function exactOrigin(url:string,configured?:string){if(!configured)return true;try{return new URL(url).origin===new URL(configured).origin}catch{return false}}
 function bucketOf(env:Env,source:Source){return source==='public'?env.WEB_ASSETS:env.PRIVATE_MEDIA}
 function parseSource(s:string|null):Source|'all'|null{return s===null||s==='all'?'all':s==='private'||s==='public'||s==='generated'?s:null}
 function sourceFromEncoded(s:string):Source|null {return s==='private'||s==='public'?s:null}
@@ -32,7 +32,7 @@ async function authenticated(request:Request,env:Env):Promise<string|null>{
   const jwks=createRemoteJWKSet(new URL('/cdn-cgi/access/certs',team));
   const {payload}=await jwtVerify(jwt,jwks,{issuer:team.origin,audience:env.ACCESS_AUD,algorithms:['RS256','ES256']});
   return typeof payload.sub==='string'&&payload.sub?payload.sub:null;
- }catch{return false}
+ }catch{return null}
 }
 async function list(request:Request,env:Env){
  const p=new URL(request.url).searchParams;
