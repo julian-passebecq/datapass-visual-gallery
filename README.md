@@ -2,6 +2,10 @@
 
 Private, full-screen React gallery for browsing archived DataPass references and approved web assets stored in Cloudflare R2. **ChatGPT.com execution scope, review branch only.** No production deployment performed merely by publishing code.
 
+## Preview deployment (2026-10-11)
+
+An owner-only preview was deployed directly through the connected Cloudflare Worker API at **https://datapass-visual-gallery-preview.datapass.workers.dev/**. Cloudflare confirmed R2 bindings and Access policy; the actual logged-in browser UX is still unverified. The review branch has **not** been merged, and full V1 acceptance is incomplete. Deployment receipt: [`docs/releases/PREVIEW-20261011.md`](docs/releases/PREVIEW-20261011.md).
+
 ## Product
 
 - Responsive grid/list library and full-size viewer, source filters, safe server-side R2 listing and filename/path search.
