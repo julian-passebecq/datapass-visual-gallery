@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+test('Worker refuses requests without Access authentication before serving private files',()=>{const code=fs.readFileSync('worker/index.ts','utf8');assert.match(code,/if\(!await authenticated\(request,env\)\)/);assert.match(code,/if\(!env.ACCESS_TEAM_DOMAIN\|\|!env.ACCESS_AUD\)return false/);assert.match(code,/jwtVerify\(/)});
+test('No endpoint creates public objects or signs open URLs',()=>{const code=fs.readFileSync('worker/index.ts','utf8');assert.doesNotMatch(code,/\.put\(|\.delete\(|signUrl|presign/i);assert.match(code,/PRIVATE_MEDIA:R2Bucket/);assert.match(code,/WEB_ASSETS:R2Bucket/)});
+test('Static assets cannot bypass worker authorization',()=>{const code=fs.readFileSync('wrangler.jsonc','utf8');assert.match(code,/"run_worker_first": true/);assert.match(code,/"binding": "ASSETS"/)});
+test('Repo excludes secrets',()=>{const gitignore=fs.readFileSync('.gitignore','utf8');assert.match(gitignore,/\.env\*/)});
+
+test('Connector assets serve original bytes, never gzip compressed text',()=>{const code=fs.readFileSync('scripts/package-connector-deploy.mjs','utf8');assert.match(code,/body:b\.toString\('base64'\)/);assert.doesNotMatch(code,/'content-encoding':'gzip'/);assert.match(code,/content-type':found\.type/);assert.match(code,/Invalid plain HTML asset/);});
