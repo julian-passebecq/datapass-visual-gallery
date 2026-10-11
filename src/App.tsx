@@ -76,9 +76,9 @@ function App(){
  const activeIndex=previews.findIndex(i=>active&&stableKey(i)===stableKey(active));
  function move(dir:number){if(previews.length)setActive(previews[((activeIndex<0?0:activeIndex)+dir+previews.length)%previews.length])}
  function toggle(item:MediaItem){
-  const id=stableKey(item);
-  setSelected(old=>{const next=new Set(old);next.has(id)?next.delete(id):next.add(id);return next});
-  setSelectedRecords(old=>{const next={...old};if(next[id])delete next[id];else next[id]=item;return next});
+  const id=stableKey(item),wasSelected=selected.has(id);
+  setSelected(old=>{const next=new Set(old);wasSelected?next.delete(id):next.add(id);return next});
+  setSelectedRecords(old=>{const next={...old};if(wasSelected)delete next[id];else next[id]=item;return next});
  }
  function clearSelection(){setSelected(new Set());setSelectedRecords({})}
  function exportSelection(){
