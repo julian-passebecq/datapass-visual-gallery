@@ -28,7 +28,7 @@ The live gallery and source remain owned by this product repo. Existing private-
 - Stored derived private snapshot in EU Workers KV namespace `datapass-visual-gallery-index-v1`, key `catalog-v1`.
 - Records: 99 references; 75 with image links; 90 private R2 asset associations.
 - Data snapshot timestamp `2026-10-11T22:00:26.548Z`.
-- Source snapshot SHA-256 `254a6ec33da653377c4ca0d469a67fcf6a107830f3053224d019983bf6872b51`, 145466 UTF-8 bytes.
+- Source snapshot SHA-256 `254a6ec33da653377c4ca0d469a67fcf6a107830f3053224d019983bf6872b51`, 145466 JSON code units (the quoted count is not a byte-length claim).
 - The gallery performs **deterministic metadata relevance ranking**, not MongoDB Atlas Search, embeddings, vector similarity or live query. The snapshot can go stale; Mongo remains authoritative. No new Atlas Search indexes created.
 
 ## User-facing scope
