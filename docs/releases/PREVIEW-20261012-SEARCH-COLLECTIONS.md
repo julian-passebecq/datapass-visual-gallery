@@ -10,12 +10,12 @@ The live gallery and source remain owned by this product repo. Existing private-
 ## Source and build receipt
 - Existing feature baseline: `feat/visual-library-full-v1` PR #1.
 - Increment branch: `feat/gallery-search-collections-import-v1`, draft PR #2, base existing feature branch.
-- **Exact deployed product code:** `a62eac8babc715711be794bb9a8e193bdbcbab2e`, GitHub CI run #47 (`38179269306`) PASS (unit/contract tests, TypeScript, Vite build, Wrangler dry-run and inline Worker bundling).
+- **Initial increment deployment code:** `a62eac8babc715711be794bb9a8e193bdbcbab2e`, GitHub CI run #47 (`38179269306`) PASS (unit/contract tests, TypeScript, Vite build, Wrangler dry-run and inline Worker bundling).
 - Build synthetic PR merge checkout: `9fc3e23a20ad4f8f9898965c11122e8dcb4aa89a`; not the product branch SHA.
 - Compiled Worker SHA-256: `af6b20501fa3c75c32c648896969e2caaf42f287635887df2cc60923f78c1617`, 384802 bytes.
 - Cloudflare Worker: `datapass-visual-gallery-preview`.
-- Live deployment ID: `1bb3be59-3533-4feb-8b37-9def7d71cada`.
-- Live version: `8fb54686-0811-49a5-84ac-41f137d1a464`, allocation 100%.
+- Initial increment deployment ID: `1bb3be59-3533-4feb-8b37-9def7d71cada`.
+- Initial increment version: `8fb54686-0811-49a5-84ac-41f137d1a464`, originally allocated 100% (superseded below).
 - Protected URL: `https://datapass-visual-gallery-preview.datapass.workers.dev/`.
 - **Post-deployment verified bindings:** `PRIVATE_MEDIA=datapass-media`, `WEB_ASSETS=datapass-web-assets`, `CATALOG=a93c349e350d4c36b51e575d266b1474`, plus owner Access audience/issuer/origin.
 - Cloudflare Access: one exact-owner allow policy, both public-host and Worker destinations. No bypass configured.
@@ -53,3 +53,15 @@ Remaining explicit V1 gaps in `spec/features.csv` and `spec/ux.csv`: no automate
 
 ## Publication boundary
 All implementation, tests, and release evidence are on review branches only. Private media bytes, Access JWTs, Cloudflare API tokens, signed URLs and raw conversations are not published to Git. Remote ChatGPT cannot attest `D:\PROJ`.
+
+## Latest compatible update — preservation of existing favorites
+
+The upgraded gallery originally downloaded an empty server-side favorites set on first login and risked replacing older local browser favorites. A focused migration now **retains unmatched local favorites** until the owner explicitly clicks **Sync local favorites**. The first successful authenticated state save also marks the legacy migration complete. No previously stored favorites were deleted or reset by the release. The user still needs to verify the migration in a real browser.
+
+- Product-code commit: `5cb606c7027b93a9ad2161712a2f3e0539cc5ff9`.
+- GitHub Actions #64, run `38179738063`: **SUCCESS** (all tests including migration, TS, Vite and Worker bundle).
+- Synthetic PR merge checkout SHA: `e467b14232b2b9dfd56e43496ee0d85d84dd757d`.
+- Compiled Worker SHA-256: `df646b14119e27dec90da5c0ebc474ef8d42ec6bcd155f6eb1a4df565df82f66`, 385462 bytes.
+- **Current active Cloudflare deployment:** `26525faf-e85a-49c3-904c-a600307f63b5`, version `afc923e9-0444-43c5-bd14-c53bb76d9c7e` at 100%.
+- Post-deploy verified owner-only Cloudflare Access, `PRIVATE_MEDIA`, `WEB_ASSETS`, `CATALOG` bindings unchanged.
+- This supersedes only the earlier Worker version. Source history and original CI receipts are retained. Remaining V1 acceptance status unchanged.
