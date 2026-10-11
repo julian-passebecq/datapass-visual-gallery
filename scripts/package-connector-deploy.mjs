@@ -15,7 +15,7 @@ const assets={};
 for(const p of files){const path='/'+relative(DIST,p).replaceAll('\\','/');const b=await readFile(p);assets[path]={type:MIME[extname(p).toLowerCase()]||'application/octet-stream',body:b.toString('base64')};}
 // Fail build if the HTML being deployed is compressed or has an invalid entrypoint.
 const html=Buffer.from(assets['/index.html'].body,'base64').toString('utf8');
-if(!/^\\s*<!doctype html/i.test(html)||!html.includes('id="root"'))throw new Error('Invalid plain HTML asset in connector package');
+if(!/^\s*<!doctype html/i.test(html)||!html.includes('id="root"'))throw new Error('Invalid plain HTML asset in connector package');
 for(const [path,asset] of Object.entries(assets)){
  const bytes=Buffer.from(asset.body,'base64');
  if(bytes.byteLength!== (await readFile(join(DIST,path.slice(1)))).byteLength)throw new Error('Asset byte size mismatch: '+path);
