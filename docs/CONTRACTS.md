@@ -18,3 +18,9 @@ Owner Access sub is SHA-256 namespaced in KV. State includes revision, named col
 Explicit multipart import into **private** datapass-media R2 under originals/gallery-import/. PNG/JPEG/WebP/GIF signature checks, 8 MiB maximum, purpose and tags recorded as R2 metadata. Images appear in Generated & imported filter but are marked PENDING_REFERENCE_INTAKE until normal Mongo reference intake; this Worker never writes MongoDB. No public publishing route.
 ## Browser/UI
 Selections include saved image metadata across pages and filters, so export cannot silently drop unloaded selections. Large image viewer preserved. The Edge extension requires a separate non-destructive integration reviewed against its newest dashboard branch.
+
+## R2 media list pagination and visual compare increment
+
+The listing endpoint now returns **no more than the requested** limit (1-100) with an opaque cursor containing its current bucket page and intra-page offset. A cursor is only valid with its original source and case-normalized filename query; mismatch is rejected. Generated imports remain in private R2 and receive the generated source label. R2 listing is bounded to eight upstream pages per response and may return a smaller page plus continuation when a filename query has sparse matches. This avoids the former behavior of returning an entire large R2 page when the UI only requested 80 items. The cursor is not a secret or authorization token; every request still requires owner Cloudflare Access authentication.
+
+The website adds local-only two-image comparison and zoom; no media is moved or published. Adjustable card size and native lazy image decoding reduce off-screen rendering work. **These do not downscale original image payloads**. Cloudflare Images transformation binding requires separate subscription/billing approval or a separately designed offline thumbnail pipeline; no new paid dependency is introduced by this increment.
