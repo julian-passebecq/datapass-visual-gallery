@@ -34,43 +34,63 @@ async function authenticated(request:Request,env:Env):Promise<string|false>{
   return typeof payload.sub==='string'&&payload.sub?payload.sub:false;
  }catch{return false}
 }
-async function list(request:Request,env:Env){
+type ListingCursor={s:Source;c:string;o:number;q:string};
+function asCursor(s:Source,c:string,o:number,q:string):string{
+ return btoa(JSON.stringify({s,c,o,q} satisfies ListingCursor));
+}
+export async function list(request:Request,env:Env){
  const p=new URL(request.url).searchParams;
  const source=parseSource(p.get('source'));if(!source)return json({error:'Invalid source'},400);
  const limit=Math.max(1,Math.min(100,Number(p.get('limit')||60)||60));
- const q=(p.get('q')||'').toLowerCase().slice(0,200);
- const cursor=p.get('cursor')||'';
- let state:{s:Source;c?:string}|undefined;
- if(cursor){try{const parsed=JSON.parse(atob(cursor));if(!['private','public','generated'].includes(parsed.s)||typeof parsed.c!=='string')throw 0;state=parsed}catch{return json({error:'Invalid cursor'},400)}}
+ const q=(p.get('q')||'').trim().toLowerCase().slice(0,200);
+ const rawCursor=p.get('cursor')||'';
  const sources:Source[]=source==='all'?['private','public']:[source];
- if(state&&!sources.includes(state.s))return json({error:'Cursor/source mismatch'},400);
- let offset=state?Math.max(0,sources.indexOf(state.s)):0;
- const items:Item[]=[];
- let nextCursor:string|undefined;
- for(;offset<sources.length;offset++){
-  const s=sources[offset],bucket=bucketOf(env,s);
-  let c=state?.s===s?state.c:undefined;
-  for(let pages=0;pages<10&&items.length<limit;pages++){
-   const page=await bucket.list({limit:Math.min(1000,Math.max(100,limit*3)),cursor:c,...(s==='generated'?{prefix:'originals/gallery-import/'}:{})});
-   for(const o of page.objects){if(validMedia(o.key)&&(!q||o.key.toLowerCase().includes(q)))items.push(itemOf(o,s));if(items.length>=limit)break}
-   // Advance at page boundaries to avoid silently skipping items.
-   if(items.length>=limit){
-    // R2 returns a cursor for next page, but not for the position inside this page.
-    // Return all matching objects from this page to avoid omissions.
-    for(const o of page.objects){const id=s+':'+o.key;if(!items.some(x=>x.id===id)&&validMedia(o.key)&&(!q||o.key.toLowerCase().includes(q)))items.push(itemOf(o,s))}
-    if(page.truncated&&page.cursor)nextCursor=btoa(JSON.stringify({s,c:page.cursor}));
-    else if(offset<sources.length-1)nextCursor=btoa(JSON.stringify({s:sources[offset+1],c:''}));
-    break;
-   }
-   if(!page.truncated){if(offset<sources.length-1)nextCursor=btoa(JSON.stringify({s:sources[offset+1],c:''}));break}
-   c=page.cursor;
-   if(pages===9&&c)nextCursor=btoa(JSON.stringify({s,c}));
-  }
-  if(nextCursor&&items.length>=limit)break;
-  if(nextCursor&&offset<sources.length-1)continue;
+ let state:ListingCursor|undefined;
+ if(rawCursor){
+  if(rawCursor.length>2048)return json({error:'Invalid cursor'},400);
+  try{
+   const v=JSON.parse(atob(rawCursor)) as ListingCursor;
+   if(!v||!sources.includes(v.s)||typeof v.c!=='string'||v.c.length>1024||
+      !Number.isInteger(v.o)||v.o<0||v.o>1000||v.q!==q)throw new Error('Invalid listing cursor');
+   state=v;
+  }catch{return json({error:'Invalid cursor or query mismatch'},400)}
  }
- return json({items,cursor:nextCursor,hasMore:Boolean(nextCursor),sources:{private:true,public:true}});
+ const items:Item[]=[];
+ const pageSize=Math.max(100,Math.min(400,limit*2));
+ for(let si=state?sources.indexOf(state.s):0;si<sources.length;si++){
+  const s=sources[si];
+  const bucket=bucketOf(env,s);
+  let cursor=state?.s===s?state.c:'';
+  let offset=state?.s===s?state.o:0;
+  let exhausted=false;
+  for(let scanned=0;scanned<8;scanned++){
+   const page=await bucket.list({limit:pageSize,...(cursor?{cursor}:{}),
+    ...(s==='generated'?{prefix:'originals/gallery-import/'}:{})});
+   if(offset>page.objects.length)return json({error:'Expired listing cursor; reload results'},409);
+   for(let j=offset;j<page.objects.length;j++){
+    const obj=page.objects[j];
+    if(!validMedia(obj.key)||q&&!obj.key.toLowerCase().includes(q))continue;
+    items.push(itemOf(obj,s));
+    if(items.length===limit){
+     const next=j+1<page.objects.length?asCursor(s,cursor,j+1,q):
+      page.truncated&&page.cursor?asCursor(s,page.cursor,0,q):
+      si<sources.length-1?asCursor(sources[si+1],'',0,q):undefined;
+     return json({items,cursor:next,hasMore:Boolean(next),sources:{private:true,public:true}});
+    }
+   }
+   if(!page.truncated){exhausted=true;break}
+   if(!page.cursor)return json({error:'R2 listing cursor missing'},502);
+   cursor=page.cursor;offset=0;
+  }
+  if(!exhausted){
+   const next=asCursor(s,cursor,offset,q);
+   return json({items,cursor:next,hasMore:true,sources:{private:true,public:true}});
+  }
+  state=undefined;
+ }
+ return json({items,hasMore:false,sources:{private:true,public:true}});
 }
+
 async function file(request:Request,env:Env,path:string){
  const segments=path.split('/');const source=sourceFromEncoded(segments.shift()||'');if(!source)return json({error:'Invalid source'},400);
  let key:string;try{key=segments.map(decodeURIComponent).join('/')}catch{return json({error:'Malformed key'},400)}
