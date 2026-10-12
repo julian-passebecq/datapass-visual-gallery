@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Search, Images, Grid2X2, List, CheckSquare, Square, Star, Download, ExternalLink, X, ChevronLeft, ChevronRight, RefreshCcw, FolderOpen, ShieldCheck, Copy, Filter, Upload, Plus, FolderPlus, Trash2, Pencil, AlertCircle } from 'lucide-react';
+import { Search, Images, Grid2X2, List, CheckSquare, Square, Star, Download, ExternalLink, X, ChevronLeft, ChevronRight, RefreshCcw, FolderOpen, ShieldCheck, Copy, Filter, Upload, Plus, FolderPlus, Trash2, Pencil, AlertCircle, Columns2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import type { MediaItem, MediaPage, Source, ReferenceMatch, ReferenceResult, CollectionState, Collection, StoredImage } from './types';
 import { mediaType, stableKey, fromStored } from './types';
+import CompareViewer from './CompareViewer';
 
 type Tab = 'all' | Source | 'favorites' | 'selected' | 'collections';
 const SOURCES:{value:Tab;label:string}[]=[
@@ -31,6 +32,8 @@ function App(){
  const [active,setActive]=useState<MediaItem|null>(null),[listMode,setListMode]=useState(false),[showFilters,setShowFilters]=useState(false),[kind,setKind]=useState('all');
  const [showImport,setShowImport]=useState(false),[uploading,setUploading]=useState(false),[uploadFile,setUploadFile]=useState<File|null>(null),[uploadTitle,setUploadTitle]=useState(''),[uploadTags,setUploadTags]=useState(''),[uploadPurpose,setUploadPurpose]=useState('GENERATED_IMAGE');
  const [notice,setNotice]=useState('');
+ const [comparison,setComparison]=useState<MediaItem[]>([]),[comparing,setComparing]=useState(false),[zoom,setZoom]=useState(100);
+ const [density,setDensity]=useState<'compact'|'comfortable'|'large'>(()=>{const v=localStorage.getItem('dvl:card-size:v1');return v==='compact'||v==='large'?v:'comfortable'});
  const source:Source|'all'=tab==='private'||tab==='public'||tab==='generated'?tab:'all';
  const load=useCallback(async(next?:string,reset=false)=>{
   setBusy(true);setError('');
@@ -47,6 +50,8 @@ function App(){
  useEffect(()=>{localStorage.setItem('dvl:selected:v1',JSON.stringify([...selected]))},[selected]);
  useEffect(()=>{localStorage.setItem('dvl:selected-records:v1',JSON.stringify(selectedRecords))},[selectedRecords]);
  useEffect(()=>{localStorage.setItem('dvl:favorites:v1',JSON.stringify([...favorites]))},[favorites]);
+ useEffect(()=>{localStorage.setItem('dvl:card-size:v1',density)},[density]);
+ useEffect(()=>{setZoom(100)},[active?.id]);
  useEffect(()=>{function onEscape(e:KeyboardEvent){if(e.key==='Escape')setActive(null)}window.addEventListener('keydown',onEscape);return()=>window.removeEventListener('keydown',onEscape)},[]);
  useEffect(()=>{let cancelled=false;(async()=>{try{
   const res=await fetch('/api/collections',{credentials:'same-origin',cache:'no-store'});
@@ -84,6 +89,14 @@ function App(){
  const previews=useMemo(()=>unique([...visible,...matchedItems]),[visible,matchedItems]);
  const activeIndex=previews.findIndex(i=>active&&stableKey(i)===stableKey(active));
  function move(dir:number){if(previews.length)setActive(previews[((activeIndex<0?0:activeIndex)+dir+previews.length)%previews.length])}
+ function toggleCompare(item:MediaItem){
+  if(mediaType(item.key)!=='image')return;
+  const id=stableKey(item);
+  if(comparison.some(x=>stableKey(x)===id)){setComparison(old=>old.filter(x=>stableKey(x)!==id));setComparing(false);return}
+  if(comparison.length===2){setNotice('Comparison has two images. Remove one before adding another.');return}
+  setComparison(old=>[...old,item]);
+ }
+ function removeComparison(item:MediaItem){setComparison(old=>old.filter(x=>stableKey(x)!==stableKey(item)));setComparing(false)}
  function toggle(item:MediaItem){
   const id=stableKey(item),wasSelected=selected.has(id);
   setSelected(old=>{const next=new Set(old);wasSelected?next.delete(id):next.add(id);return next});
@@ -170,6 +183,7 @@ function App(){
     <button aria-label="Filters" className="tool" onClick={()=>setShowFilters(x=>!x)}><Filter size={17}/></button>
     <button aria-label="Toggle layout" className="tool" onClick={()=>setListMode(x=>!x)}>{listMode?<Grid2X2 size={17}/>:<List size={17}/>}</button>
     <button className="import-button" onClick={()=>setShowImport(x=>!x)}><Upload size={16}/> Import</button>
+    <label className="density-control">Card size <select aria-label="Card size" value={density} onChange={e=>setDensity(e.target.value as 'compact'|'comfortable'|'large')}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></label>
     {legacyFavoritesPending&&<button className="import-button" disabled={collectionBusy||!collectionsLoaded} onClick={()=>void persist(collections.collections,favorites).then(()=>setNotice('Your existing local favorites are now synchronized across devices.')).catch(()=>{})}><Star size={16}/> Sync local favorites</button>}
    </div>
    {showFilters&&<div className="filters"><label>Media type <select value={kind} onChange={e=>setKind(e.target.value)}><option value="all">All files</option><option value="image">Images</option><option value="video">Video</option><option value="other">Other files</option></select></label><span>Filename search uses R2 keys. Reference search ranks MongoDB snapshot descriptions and tags; it is not vector search.</span></div>}
@@ -191,7 +205,7 @@ function App(){
     {searchError&&<div role="alert" className="error">Reference search: {searchError}</div>}
     {!searchBusy&&!searchError&&references.length===0&&<p className="ref-empty">No matching reference metadata. You can still browse matching R2 filenames below.</p>}
     <div className="reference-results">{references.slice(0,25).map(r=><article className="reference-card" key={r.id}>
-     <div className="reference-images">{r.assets.slice(0,3).map(a=><button aria-label={'Open '+r.title} key={a.key} onClick={()=>setActive({id:'private:'+a.key,source:'private',key:a.key,title:r.title,size:0,mime:a.mime,url:a.url})}><img loading="lazy" alt={r.title} src={a.url}/></button>)}{!r.assets.length&&<span>No linked image</span>}</div>
+     <div className="reference-images">{r.assets.slice(0,3).map(a=><button aria-label={'Open '+r.title} key={a.key} onClick={()=>setActive({id:'private:'+a.key,source:'private',key:a.key,title:r.title,size:0,mime:a.mime,url:a.url})}><img loading="lazy" decoding="async" alt={r.title} src={a.url}/></button>)}{!r.assets.length&&<span>No linked image</span>}</div>
      <div><div className="reference-code">{r.id} · metadata match</div><strong>{r.title}</strong><p>{r.visual||r.summary}</p><div className="reference-tags">{r.tags.slice(0,5).map(t=><span key={t}>{t}</span>)}</div></div>
      {r.assets[0]&&<button className="ref-select" onClick={()=>toggle({id:'private:'+r.assets[0].key,source:'private',key:r.assets[0].key,title:r.title,size:0,mime:r.assets[0].mime,url:r.assets[0].url})}>{selected.has('private:'+r.assets[0].key)?'Deselect':'Select image'}</button>}
     </article>)}</div>
@@ -199,19 +213,21 @@ function App(){
    <div className="section-title"><div><h2>{SOURCES.find(s=>s.value===tab)?.label}</h2><span>{visible.length} visible · {items.length} loaded</span></div><div className="selection-tools"><strong>{selected.size} selected</strong><button disabled={!recorded.length} onClick={exportSelection}><Download size={15}/> Export manifest</button><button disabled={!selected.size} onClick={clearSelection}>Clear</button></div></div>
    {error&&<div role="alert" className="error"><strong>Unable to load images.</strong> {error}<button onClick={()=>void load(undefined,true)}>Retry</button></div>}
    {!busy&&!error&&visible.length===0&&<div className="empty"><Images size={30}/><h3>No matching images in this view</h3><p>Try another source, search or collection. Selected and favorite image pointers do not publish originals.</p></div>}
-   <div className={listMode?'gallery list':'gallery'}>{visible.map(item=>{const chosen=selected.has(stableKey(item)),starred=favorites.has(stableKey(item));return <article key={stableKey(item)} className={'media '+(chosen?'picked':'')}>
-    <div className="media-frame" onClick={()=>setActive(item)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')setActive(item)}} aria-label={'Open '+item.title}>{mediaType(item.key)==='image'?<img src={item.url} loading="lazy" alt={item.title}/>:<div className="no-preview">{mediaType(item.key)==='video'?'Video':'File'} preview</div>}</div>
+   <div className={'gallery '+(listMode?'list ':'')+'density-'+density}>{visible.map(item=>{const chosen=selected.has(stableKey(item)),starred=favorites.has(stableKey(item));return <article key={stableKey(item)} className={'media '+(chosen?'picked':'')}>
+    <div className="media-frame" onClick={()=>setActive(item)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')setActive(item)}} aria-label={'Open '+item.title}>{mediaType(item.key)==='image'?<img src={item.url} loading="lazy" decoding="async" fetchPriority="low" alt={item.title}/>:<div className="no-preview">{mediaType(item.key)==='video'?'Video':'File'} preview</div>}</div>
     <div className="media-data"><div className="media-head"><span title={item.title}>{item.title}</span><button title="Favorite" aria-label={'Favorite '+item.title} className={'mini '+(starred?'active':'')} disabled={collectionBusy||!collectionsLoaded} onClick={()=>void favorite(item)}><Star size={17} fill={starred?'currentColor':'none'}/></button></div>
      <div className="meta"><span>{item.source==='private'?'PRIVATE R2':item.source==='generated'?'GENERATED / IMPORTED':'WEB ASSETS'}</span><span>{item.mime.split('/').pop()?.toUpperCase()}</span></div>
-     <div className="media-actions"><button onClick={()=>toggle(item)}>{chosen?<CheckSquare size={16}/>:<Square size={16}/>} {chosen?'Selected':'Select'}</button><button aria-label={'Copy R2 key of '+item.title} title="Copy R2 key" onClick={()=>void navigator.clipboard?.writeText(item.key)}><Copy size={15}/></button>{tab==='collections'&&<button title="Remove from collection" aria-label={'Remove '+item.title+' from collection'} disabled={collectionBusy} onClick={()=>removeFromCollection(item)}><X size={15}/></button>}</div>
+     <div className="media-actions"><button onClick={()=>toggle(item)}>{chosen?<CheckSquare size={16}/>:<Square size={16}/>} {chosen?'Selected':'Select'}</button><button aria-label={'Compare '+item.title} title="Add or remove from comparison" disabled={mediaType(item.key)!=='image'} onClick={()=>toggleCompare(item)}><Columns2 size={15}/>{comparison.some(x=>stableKey(x)===stableKey(item))?'Queued':'Compare'}</button><button aria-label={'Copy R2 key of '+item.title} title="Copy R2 key" onClick={()=>void navigator.clipboard?.writeText(item.key)}><Copy size={15}/></button>{tab==='collections'&&<button title="Remove from collection" aria-label={'Remove '+item.title+' from collection'} disabled={collectionBusy} onClick={()=>removeFromCollection(item)}><X size={15}/></button>}</div>
     </div></article>})}</div>
    {hasMore&&!error&&tab!=='collections'&&tab!=='selected'&&<div className="load"><button disabled={busy} onClick={()=>void load(cursor)}>{busy?'Loading…':'Load more'}</button></div>}
    {busy&&!items.length&&<p className="loading">Loading your media securely…</p>}
    {collectionError&&tab!=='collections'&&<div role="alert" className="error">Collection sync: {collectionError}</div>}
   </main>
+  {comparison.length>0&&<div className="compare-tray" role="region" aria-label="Image comparison selection"><div><Columns2 size={17}/><strong>Compare {comparison.length}/2</strong><span title={comparison.map(x=>x.title).join(' / ')}>{comparison.map(x=>x.title).join('  ·  ')}</span></div><button disabled={comparison.length!==2} onClick={()=>{setActive(null);setComparing(true)}}>Compare now</button><button onClick={()=>{setComparison([]);setComparing(false)}}>Clear</button></div>}
+  {comparing&&comparison.length===2&&<CompareViewer images={[comparison[0],comparison[1]]} onClose={()=>setComparing(false)} onRemove={removeComparison}/>}
   {active&&<div className="overlay" role="dialog" aria-modal="true" aria-label="Media viewer" onClick={()=>setActive(null)}><div className="viewer" onClick={e=>e.stopPropagation()}><div className="viewer-bar"><div><strong>{active.title}</strong><small>{active.source} / {active.key}</small></div><button aria-label="Close viewer" onClick={()=>setActive(null)}><X size={22}/></button></div>
-   <div className="viewer-image"><button aria-label="Previous image" onClick={()=>move(-1)}><ChevronLeft/></button>{mediaType(active.key)==='image'?<img src={active.url} alt={active.title}/>:mediaType(active.key)==='video'?<video controls src={active.url}/>:<p>Preview unavailable for this file type.</p>}<button aria-label="Next image" onClick={()=>move(1)}><ChevronRight/></button></div>
-   <div className="viewer-footer"><span>{activeIndex+1} / {previews.length}</span><div><button onClick={()=>toggle(active)}><CheckSquare size={16}/> {selected.has(stableKey(active))?'Deselect':'Select'}</button><button onClick={()=>void navigator.clipboard?.writeText(active.key)}><Copy size={16}/> Copy R2 key</button><a href={active.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> Open original</a></div></div></div></div>}
+   <div className="viewer-image"><button aria-label="Previous image" onClick={()=>move(-1)}><ChevronLeft/></button>{mediaType(active.key)==='image'?<div className="viewer-image-scroll"><img src={active.url} alt={active.title} decoding="async" style={{width:zoom===100?'auto':zoom+'%',maxWidth:zoom===100?'100%':'none',maxHeight:zoom===100?'100%':'none'}}/></div>:mediaType(active.key)==='video'?<video controls src={active.url}/>:<p>Preview unavailable for this file type.</p>}<button aria-label="Next image" onClick={()=>move(1)}><ChevronRight/></button></div>
+   <div className="viewer-footer"><span>{activeIndex+1} / {previews.length}</span><div className="viewer-zoom"><button aria-label="Zoom out" disabled={zoom<=60} onClick={()=>setZoom(n=>Math.max(60,n-20))}><ZoomOut size={16}/></button><span aria-live="polite">{zoom}%</span><button aria-label="Zoom in" disabled={zoom>=240} onClick={()=>setZoom(n=>Math.min(240,n+20))}><ZoomIn size={16}/></button><button aria-label="Reset zoom" onClick={()=>setZoom(100)}><RotateCcw size={16}/></button></div><div><button onClick={()=>toggle(active)}><CheckSquare size={16}/> {selected.has(stableKey(active))?'Deselect':'Select'}</button><button disabled={mediaType(active.key)!=='image'} onClick={()=>toggleCompare(active)}><Columns2 size={16}/> {comparison.some(x=>stableKey(x)===stableKey(active))?'Remove from compare':'Compare'}</button><button onClick={()=>void navigator.clipboard?.writeText(active.key)}><Copy size={16}/> Copy R2 key</button><a href={active.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> Open original</a></div></div></div></div>}
  </div>;
 }
 export default App;
