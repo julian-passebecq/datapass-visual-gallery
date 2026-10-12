@@ -22,3 +22,28 @@ jobs:
 
       - name: Package owner-protected preview Worker (public source only)
         run: npm run package:connector -- --emit
+
+
+  synthetic-browser:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Install isolated Chromium and Playwright
+        run: |
+          npm install --no-save --no-package-lock --ignore-scripts playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Test gallery interactions with synthetic media only
+        run: node scripts/browser-gallery-smoke.mjs
+      - name: Preserve synthetic-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-gallery-synthetic-browser
+          path: artifacts/synthetic/*.png
+          if-no-files-found: ignore
+          retention-days: 7
