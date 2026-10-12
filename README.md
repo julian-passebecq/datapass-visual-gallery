@@ -6,13 +6,25 @@ Private, full-screen React gallery for browsing archived DataPass references and
 
 An owner-only preview was deployed directly through the connected Cloudflare Worker API at **https://datapass-visual-gallery-preview.datapass.workers.dev/**. Cloudflare confirmed R2 bindings and Access policy; the actual logged-in browser UX is still unverified. The review branch has **not** been merged, and full V1 acceptance is incomplete. Deployment receipt: [`docs/releases/PREVIEW-20261011.md`](docs/releases/PREVIEW-20261011.md).
 
+## Enhanced protected preview — search, collections and import
+
+The review branch `feat/gallery-search-collections-import-v1` adds weighted **Mongo-derived metadata search** (not vector embeddings, not a live MongoDB query), owner-scoped saved collections/favorites and owner-triggered private image imports. The Cloudflare preview is deployed, and both the backend integration tests and Worker bundle checks passed. User-browser acceptance remains open. The earlier successful screenshot established base R2 thumbnail rendering only.
+
+- [Deployment, provenance, CI and outstanding qualification](docs/releases/PREVIEW-20261012-SEARCH-COLLECTIONS.md)
+- [Gallery review PR #2](https://github.com/julian-passebecq/datapass-visual-gallery/pull/2)
+- [Companion Edge launcher review PR #4](https://github.com/julian-passebecq/ms-edge-rust-datapass/pull/4)
+
+## Latest protected preview — comparison and bounded loading
+
+A review-only update adds **two-image compare**, zoom, compact/large card sizes and bounded R2 pagination. CI run #85 passed both Worker qualification and synthetic Chromium interaction checks; current owner-only Cloudflare preview is deployed at the same URL. Real archive comparison and anonymous-access browser testing remain pending, and full-size originals are still downloaded as images become visible. No new Cloudflare Images subscription was activated. [Latest release receipt](docs/releases/PREVIEW-20261012-COMPARE-PAGINATION.md).
+
 ## Product
 
 - Responsive grid/list library and full-size viewer, source filters, safe server-side R2 listing and filename/path search.
 - Multi-select, favorites, persistent local browser basket, exportable selection manifest with provenance.
-- Private `datapass-media` and approved `datapass-web-assets` remain separate. **No public publishing, upload, move, deletion or rename endpoints.**
+- Private `datapass-media` and approved `datapass-web-assets` remain separate. **No public publishing, move, deletion or rename endpoints.** A new owner-authenticated, classified image-import endpoint writes exclusively to private R2 and marks items pending canonical MongoDB reference intake.
 - Cloudflare Worker authenticates every request against a verified Cloudflare Access JWT, including static assets and originals. Missing/invalid Access configuration fails closed.
-- Read-only Cloudflare R2 bindings; no user credentials or raw private images in this public GitHub repository.
+- Existing public website-assets R2 binding remains read-only; private R2 supports only explicit authenticated image intake in addition to browsing. No credentials, Access tokens or original private images are committed to this public repository.
 
 ## Local development and verification
 

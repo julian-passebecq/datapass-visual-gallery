@@ -10,3 +10,14 @@ Immediate evidence needed: npm install/test/check/build, Cloudflare Access polic
 
 ## Latest Cloudflare preview (2026-10-11)
 Cloudflare protected preview Worker and inlined React assets are deployed, not yet user-qualified. See `docs/releases/PREVIEW-20261011.md` for exact hashes, CI and deployment IDs, Access bindings and known acceptance gaps. The old 503 placeholder was replaced on 2026-10-11. Do not mark V1 complete until real authenticated visual and negative-access journeys and remaining V1 features pass.
+
+## Selected gallery V1 expansion (2026-10-12)
+
+TARGET=CHATGPT.COM executed review-only changes with the owner-granted gallery and Cloudflare scope. Separate latest increment branch is `feat/gallery-search-collections-import-v1` / draft PR #2. New Cloudflare preview version and metadata-catalog provenance are pinned in `docs/releases/PREVIEW-20261012-SEARCH-COLLECTIONS.md`. That receipt supersedes the earlier deployment state for the preview, without replacing its original release history.
+
+The selected expansion implements metadata-ranked **read-only snapshot search** from MongoDB, authenticated persistent named collections/favorites, cross-page selection manifests and private owner-triggered image imports. Exact-SHA CI and Cloudflare binding checks have passed; no user-browser interaction verdict or full V1 qualification has been established. Mongo remains source owner; KV is a private generated projection; imported files are staged for formal reference intake.
+
+The independent Edge extension integration is on `julian-passebecq/ms-edge-rust-datapass` draft PR #4, based on the latest personal-command-center branch; its CI includes Windows, Rust and browser smoke. The owner's installed Edge extension is not remotely qualified. No forced merge, new public media, Atlas schema/index writes or unapproved full-release declaration.
+
+## Viewer and listing quality increment (2026-10-12)
+Review source `7a9f4a80584b1e0d163a945b131bd7f16cd2532b` qualified in GitHub CI #85 with synthetic Chromium and deployed to the owner-only Cloudflare preview. Exact SHA / hash / security / pending acceptance: `docs/releases/PREVIEW-20261012-COMPARE-PAGINATION.md`. This increment adds read-only image comparison / zoom / card-size options and fixes R2 pagination so the first page does not unexpectedly fetch the full archive. It does not generate smaller image bytes; Cloudflare Images subscription was not authorized and was not added. Owner browser and V1 gates remain open.
