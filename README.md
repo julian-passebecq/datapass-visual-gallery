@@ -14,6 +14,10 @@ The review branch `feat/gallery-search-collections-import-v1` adds weighted **Mo
 - [Gallery review PR #2](https://github.com/julian-passebecq/datapass-visual-gallery/pull/2)
 - [Companion Edge launcher review PR #4](https://github.com/julian-passebecq/ms-edge-rust-datapass/pull/4)
 
+## Latest protected preview — comparison and bounded loading
+
+A review-only update adds **two-image compare**, zoom, compact/large card sizes and bounded R2 pagination. CI run #85 passed both Worker qualification and synthetic Chromium interaction checks; current owner-only Cloudflare preview is deployed at the same URL. Real archive comparison and anonymous-access browser testing remain pending, and full-size originals are still downloaded as images become visible. No new Cloudflare Images subscription was activated. [Latest release receipt](docs/releases/PREVIEW-20261012-COMPARE-PAGINATION.md).
+
 ## Product
 
 - Responsive grid/list library and full-size viewer, source filters, safe server-side R2 listing and filename/path search.
