@@ -124,9 +124,30 @@ try{
  await page.getByRole('button',{name:'Reference feed',exact:true}).click();
  await page.locator('.reference-feed-card').first().waitFor();
  assert.equal(await page.locator('.reference-feed-card').count(),3);
+ // Feed must display several compact cards per row, including 4-column option.
+ const feedColumns=page.getByLabel('Feed columns');
+ assert.equal(await feedColumns.inputValue(),'3');
+ const columnCount=()=>page.locator('.reference-feed-list').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
+ assert.equal(await columnCount(),3);
+ await feedColumns.selectOption('4');
+ assert.equal(await columnCount(),4);
+ assert.equal(await page.evaluate(()=>localStorage.getItem('dvl:feed-columns:v1')),'4');
+ await feedColumns.selectOption('2');
+ assert.equal(await columnCount(),2);
+ await feedColumns.selectOption('3');
+ // A category header is one full-width button: clicking the count side must expand it.
+ for(const name of ['Projects','Purposes','Scopes']){
+  const axis=page.locator('.feed-tree').getByRole('button',{name,exact:true});
+  const initial=await axis.getAttribute('aria-expanded');
+  const bounds=await axis.boundingBox();assert.ok(bounds&&bounds.width>120,name+' click target too narrow');
+  await axis.click({position:{x:bounds.width-8,y:bounds.height/2}});
+  assert.notEqual(await axis.getAttribute('aria-expanded'),initial,name+' did not toggle from row end');
+  await axis.click();
+  assert.equal(await axis.getAttribute('aria-expanded'),initial);
+ }
  await page.getByRole('button',{name:'Ai Agents',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
- await page.getByRole('button',{name:'Expand Ai Agents'}).click();
+ assert.equal(await page.getByRole('button',{name:'Ai Agents',exact:true}).getAttribute('aria-expanded'),'true');
  await page.getByRole('button',{name:'Agent Ui',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
  await page.getByRole('button',{name:'Open Agent cockpit media 1'}).click();
@@ -137,9 +158,14 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
  await page.getByLabel('Feed media filter').selectOption('images');
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
+ // Narrow screen must become a single column without horizontal clipping.
+ await page.setViewportSize({width:620,height:820});
+ assert.equal(await columnCount(),1);
+ await page.setViewportSize({width:1400,height:960});
+ assert.equal(await columnCount(),3);
  await mkdir('artifacts/synthetic',{recursive:true});
  await page.screenshot({path:'artifacts/synthetic/visual-gallery.png',fullPage:false});
- console.log('PASS: synthetic gallery and Mongo feed with category tree, viewer, reference link and media filter');
+ console.log('PASS: 2/3/4-column feed, responsive cards, full-row facet clicks, nested filtering, gallery and media journeys');
 }finally{
  await browser?.close();
  server.kill('SIGTERM');
