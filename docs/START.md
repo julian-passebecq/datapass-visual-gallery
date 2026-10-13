@@ -30,3 +30,7 @@ TARGET=CHATGPT.COM review branch `feat/gallery-mongo-feed-tree-v1`, draft PR #3.
 ## Current protected preview UX patch (2026-10-13)
 
 On the existing `feat/gallery-mongo-feed-tree-v1` / draft PR #3, tested runtime `5b5e421d32ecb0e3cc7a94e2f681030ce3dea2b5` (GitHub CI #163 PASS) is deployed to the existing owner-only Cloudflare preview. The follow-up makes root Domain/Project/Purpose/Scope clicks open source-derived facet overviews, uses four compact reference cards per row by default, and adds collapsed clickable Mongo tags with AND filtering and an explicit Clear filters action. See `docs/releases/PREVIEW-20261013-MONGO-FEED.md` for the bundle hash, deployment version, CI evidence, original snapshot source and real Edge acceptance gaps. This patch changes no canonical Mongo records, original R2 assets, Edge installation or authorized public-publishing state.
+
+## Current image-first gallery patch (2026-10-13)
+
+The owner screenshot-driven UX correction reduces reference card chrome and emphasizes the original private image; the card metadata and tags are now collapsible, and an enlarged hover/focus preview appears on desktop without opening the viewer. Runtime SHA `b8bb2e9181fb917b7cb2631c9bce88f1e0421eb7` passed CI #178 and is active on the same owner-only Cloudflare preview. The canonical release evidence and remaining real Edge/readability gates are in `docs/releases/PREVIEW-20261013-MONGO-FEED.md`. PR #3 remains an unmerged draft. No new image store, public private-media URL or direct Mongo write.
