@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Search, Images, Grid2X2, List, CheckSquare, Square, Star, Download, ExternalLink, X, ChevronLeft, ChevronRight, RefreshCcw, FolderOpen, ShieldCheck, Copy, Filter, Upload, Plus, FolderPlus, Trash2, Pencil, AlertCircle, Columns2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Search, Images, Grid2X2, List, CheckSquare, Square, Star, Download, ExternalLink, X, ChevronLeft, ChevronRight, RefreshCcw, FolderOpen, ShieldCheck, Copy, Filter, Upload, Plus, FolderPlus, Trash2, Pencil, AlertCircle, Columns2, ZoomIn, ZoomOut, RotateCcw, Rss } from 'lucide-react';
 import type { MediaItem, MediaPage, Source, ReferenceMatch, ReferenceResult, CollectionState, Collection, StoredImage } from './types';
 import { mediaType, stableKey, fromStored } from './types';
 import CompareViewer from './CompareViewer';
+import FeedCategoryTree from './FeedCategoryTree';
+import type { FacetPath } from './FeedCategoryTree';
+import ReferenceFeed from './ReferenceFeed';
 
-type Tab = 'all' | Source | 'favorites' | 'selected' | 'collections';
+type Tab = 'all' | Source | 'favorites' | 'selected' | 'collections' | 'feed';
 const SOURCES:{value:Tab;label:string}[]=[
- {value:'all',label:'All media'},{value:'private',label:'Private references'},
+ {value:'feed',label:'Reference feed'},{value:'all',label:'All media'},{value:'private',label:'Private references'},
  {value:'generated',label:'Generated & imported'},{value:'public',label:'Web assets'},
  {value:'collections',label:'Collections'},{value:'favorites',label:'Favorites'},
  {value:'selected',label:'Selected'}];
@@ -32,10 +35,12 @@ function App(){
  const [active,setActive]=useState<MediaItem|null>(null),[listMode,setListMode]=useState(false),[showFilters,setShowFilters]=useState(false),[kind,setKind]=useState('all');
  const [showImport,setShowImport]=useState(false),[uploading,setUploading]=useState(false),[uploadFile,setUploadFile]=useState<File|null>(null),[uploadTitle,setUploadTitle]=useState(''),[uploadTags,setUploadTags]=useState(''),[uploadPurpose,setUploadPurpose]=useState('GENERATED_IMAGE');
  const [notice,setNotice]=useState('');
+ const [feedPath,setFeedPath]=useState<FacetPath>([]);
  const [comparison,setComparison]=useState<MediaItem[]>([]),[comparing,setComparing]=useState(false),[zoom,setZoom]=useState(100);
  const [density,setDensity]=useState<'compact'|'comfortable'|'large'>(()=>{const v=localStorage.getItem('dvl:card-size:v1');return v==='compact'||v==='large'?v:'comfortable'});
  const source:Source|'all'=tab==='private'||tab==='public'||tab==='generated'?tab:'all';
  const load=useCallback(async(next?:string,reset=false)=>{
+  if(tab==='feed')return;
   setBusy(true);setError('');
   try{const params=new URLSearchParams({source,limit:'80'});if(query.trim())params.set('q',query.trim());if(next)params.set('cursor',next);
    const resp=await fetch('/api/media?'+params,{credentials:'same-origin',cache:'no-store'});
@@ -45,7 +50,7 @@ function App(){
    setCursor(data.cursor);setHasMore(data.hasMore);
   }catch(e){setError(readableError(e));if(reset)setItems([])}
   finally{setBusy(false)}
- },[source,query]);
+ },[source,query,tab]);
  useEffect(()=>{void load(undefined,true)},[load]);
  useEffect(()=>{localStorage.setItem('dvl:selected:v1',JSON.stringify([...selected]))},[selected]);
  useEffect(()=>{localStorage.setItem('dvl:selected-records:v1',JSON.stringify(selectedRecords))},[selectedRecords]);
@@ -68,7 +73,7 @@ function App(){
  }
  }catch(e){if(!cancelled){setCollectionError(readableError(e));setCollectionsLoaded(false)}}})();return()=>{cancelled=true}},[]);
  useEffect(()=>{let cancelled=false;
-  if(!query.trim()||tab==='public'){setReferences([]);setSearchError('');return}
+  if(tab==='feed'||!query.trim()||tab==='public'){setReferences([]);setSearchError('');return}
   setSearchBusy(true);setSearchError('');
   const params=new URLSearchParams({q:query,limit:'35'});
   void fetch('/api/references?'+params,{credentials:'same-origin',cache:'no-store'})
@@ -169,21 +174,22 @@ function App(){
   }catch(err){setNotice('Import error: '+readableError(err))}
   finally{setUploading(false)}
  }
- return <div className="shell">
+ return <div className={'shell '+(tab==='feed'?'feed-shell':'')}>
   <aside className="rail">
    <div className="brand"><span className="brand-icon"><Images size={22}/></span><div><strong>DataPass</strong><small>Visual Library</small></div></div>
    <p className="nav-label">LIBRARY</p>
-   <nav aria-label="Media sources">{SOURCES.map(t=><button key={t.value} className={'nav-item '+(tab===t.value?'current':'')} onClick={()=>setTab(t.value)}><FolderOpen size={16}/><span>{t.label}</span>{t.value==='selected'&&selected.size>0?<em>{selected.size}</em>:null}</button>)}</nav>
+   <nav aria-label="Media sources">{SOURCES.map(t=><button key={t.value} className={'nav-item '+(tab===t.value?'current':'')} onClick={()=>setTab(t.value)}>{t.value==='feed'?<Rss size={16}/>:<FolderOpen size={16}/>}<span>{t.label}</span>{t.value==='selected'&&selected.size>0?<em>{selected.size}</em>:null}</button>)}</nav>
+   {tab==='feed'&&<FeedCategoryTree path={feedPath} onSelect={setFeedPath}/> }
    <div className="rail-bottom"><ShieldCheck size={15}/><span>Private by default. Imports are never published automatically.</span></div>
   </aside>
   <main className="main">
-   <header><div><div className="eyebrow">YOUR VISUAL REFERENCE WORKSPACE</div><h1>Visual Library</h1><p>Search MongoDB reference descriptions and browse your original Cloudflare images.</p></div><span className="account-label"><ShieldCheck size={15}/> Authenticated workspace</span></header>
+   <header><div><div className="eyebrow">YOUR VISUAL REFERENCE WORKSPACE</div><h1>{tab==='feed'?'Reference Feed':'Visual Library'}</h1><p>{tab==='feed'?'Follow topics and projects through your archived references and visuals.':'Search MongoDB reference descriptions and browse your original Cloudflare images.'}</p></div><span className="account-label"><ShieldCheck size={15}/> Authenticated workspace</span></header>
    <div className="toolbar"><form className="search" onSubmit={e=>{e.preventDefault();setQuery(draft)}}><Search size={19}/><input aria-label="Search references or media" placeholder="Try: agent cockpit, diagram, workflow, UI…" value={draft} onChange={e=>setDraft(e.target.value)}/><button type="submit">Search</button></form>
     <button aria-label="Refresh media" className="tool" onClick={()=>void load(undefined,true)}><RefreshCcw size={17}/></button>
     <button aria-label="Filters" className="tool" onClick={()=>setShowFilters(x=>!x)}><Filter size={17}/></button>
-    <button aria-label="Toggle layout" className="tool" onClick={()=>setListMode(x=>!x)}>{listMode?<Grid2X2 size={17}/>:<List size={17}/>}</button>
+    {tab!=='feed'&&<button aria-label="Toggle layout" className="tool" onClick={()=>setListMode(x=>!x)}>{listMode?<Grid2X2 size={17}/>:<List size={17}/>}</button>}
     <button className="import-button" onClick={()=>setShowImport(x=>!x)}><Upload size={16}/> Import</button>
-    <label className="density-control">Card size <select aria-label="Card size" value={density} onChange={e=>setDensity(e.target.value as 'compact'|'comfortable'|'large')}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></label>
+    {tab!=='feed'&&<label className="density-control">Card size <select aria-label="Card size" value={density} onChange={e=>setDensity(e.target.value as 'compact'|'comfortable'|'large')}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="large">Large</option></select></label>}
     {legacyFavoritesPending&&<button className="import-button" disabled={collectionBusy||!collectionsLoaded} onClick={()=>void persist(collections.collections,favorites).then(()=>setNotice('Your existing local favorites are now synchronized across devices.')).catch(()=>{})}><Star size={16}/> Sync local favorites</button>}
    </div>
    {showFilters&&<div className="filters"><label>Media type <select value={kind} onChange={e=>setKind(e.target.value)}><option value="all">All files</option><option value="image">Images</option><option value="video">Video</option><option value="other">Other files</option></select></label><span>Filename search uses R2 keys. Reference search ranks MongoDB snapshot descriptions and tags; it is not vector search.</span></div>}
@@ -194,6 +200,7 @@ function App(){
     <label>Purpose <select value={uploadPurpose} onChange={e=>setUploadPurpose(e.target.value)}><option value="GENERATED_IMAGE">Generated image</option><option value="DESIGN_INSPIRATION">Design inspiration</option><option value="REFERENCE">Reference</option><option value="OTHER">Other</option></select></label>
     <label>Tags <input maxLength={360} value={uploadTags} onChange={e=>setUploadTags(e.target.value)} placeholder="agent, diagram, concept"/></label>
    </div><button type="submit" disabled={uploading||!uploadFile}>{uploading?'Archiving…':'Archive to private R2'}</button></form>}
+   {tab==='feed'?<ReferenceFeed path={feedPath} query={query} selected={selected} onOpen={setActive} onSelect={toggle}/>:<>
    {tab==='collections'&&<section className="collections-panel" aria-label="Your collections"><div className="section-title"><div><h2>Collections</h2><span>Server-backed, visible on your other authenticated devices</span></div></div>
     {collectionError&&<div role="alert" className="error"><AlertCircle size={16}/> {collectionError}</div>}
     <form className="collection-create" onSubmit={createCollection}><input aria-label="New collection name" maxLength={70} placeholder="New collection name" value={newCollection} onChange={e=>setNewCollection(e.target.value)}/><button disabled={!collectionsLoaded||collectionBusy||!newCollection.trim()||collections.collections.length>=40} type="submit"><FolderPlus size={15}/> Create{recorded.length?' with selected':''}</button></form>
@@ -222,6 +229,7 @@ function App(){
    {hasMore&&!error&&tab!=='collections'&&tab!=='selected'&&<div className="load"><button disabled={busy} onClick={()=>void load(cursor)}>{busy?'Loading…':'Load more'}</button></div>}
    {busy&&!items.length&&<p className="loading">Loading your media securely…</p>}
    {collectionError&&tab!=='collections'&&<div role="alert" className="error">Collection sync: {collectionError}</div>}
+   </>}
   </main>
   {comparison.length>0&&<div className="compare-tray" role="region" aria-label="Image comparison selection"><div><Columns2 size={17}/><strong>Compare {comparison.length}/2</strong><span title={comparison.map(x=>x.title).join(' / ')}>{comparison.map(x=>x.title).join('  ·  ')}</span></div><button disabled={comparison.length!==2} onClick={()=>{setActive(null);setComparing(true)}}>Compare now</button><button onClick={()=>{setComparison([]);setComparing(false)}}>Clear</button></div>}
   {comparing&&comparison.length===2&&<CompareViewer images={[comparison[0],comparison[1]]} onClose={()=>setComparing(false)} onRemove={removeComparison}/>}
