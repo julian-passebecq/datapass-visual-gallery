@@ -5,7 +5,7 @@ import type { MediaItem, MediaPage, Source, ReferenceMatch, ReferenceResult, Col
 import { mediaType, stableKey, fromStored } from './types';
 import CompareViewer from './CompareViewer';
 import FeedCategoryTree from './FeedCategoryTree';
-import type { FacetPath } from './FeedCategoryTree';
+import type { FacetField, FacetPath } from './FeedCategoryTree';
 import ReferenceFeed from './ReferenceFeed';
 
 type Tab = 'all' | Source | 'favorites' | 'selected' | 'collections' | 'feed';
@@ -35,7 +35,7 @@ function App(){
  const [active,setActive]=useState<MediaItem|null>(null),[listMode,setListMode]=useState(false),[showFilters,setShowFilters]=useState(false),[kind,setKind]=useState('all');
  const [showImport,setShowImport]=useState(false),[uploading,setUploading]=useState(false),[uploadFile,setUploadFile]=useState<File|null>(null),[uploadTitle,setUploadTitle]=useState(''),[uploadTags,setUploadTags]=useState(''),[uploadPurpose,setUploadPurpose]=useState('GENERATED_IMAGE');
  const [notice,setNotice]=useState('');
- const [feedPath,setFeedPath]=useState<FacetPath>([]);
+ const [feedPath,setFeedPath]=useState<FacetPath>([]),[feedAxis,setFeedAxis]=useState<FacetField|null>(null);
  const [comparison,setComparison]=useState<MediaItem[]>([]),[comparing,setComparing]=useState(false),[zoom,setZoom]=useState(100);
  const [density,setDensity]=useState<'compact'|'comfortable'|'large'>(()=>{const v=localStorage.getItem('dvl:card-size:v1');return v==='compact'||v==='large'?v:'comfortable'});
  const source:Source|'all'=tab==='private'||tab==='public'||tab==='generated'?tab:'all';
@@ -179,7 +179,9 @@ function App(){
    <div className="brand"><span className="brand-icon"><Images size={22}/></span><div><strong>DataPass</strong><small>Visual Library</small></div></div>
    <p className="nav-label">LIBRARY</p>
    <nav aria-label="Media sources">{SOURCES.map(t=><button key={t.value} className={'nav-item '+(tab===t.value?'current':'')} onClick={()=>setTab(t.value)}>{t.value==='feed'?<Rss size={16}/>:<FolderOpen size={16}/>}<span>{t.label}</span>{t.value==='selected'&&selected.size>0?<em>{selected.size}</em>:null}</button>)}</nav>
-   <FeedCategoryTree path={feedPath} onSelect={path=>{setFeedPath(path);setTab('feed')}}/>
+   <FeedCategoryTree path={feedPath} activeAxis={feedAxis}
+    onSelect={path=>{setFeedAxis(null);setFeedPath(path);setTab('feed')}}
+    onSelectAxis={axis=>{setFeedAxis(axis);setFeedPath([]);setTab('feed')}}/>
    <div className="rail-bottom"><ShieldCheck size={15}/><span>Private by default. Imports are never published automatically.</span></div>
   </aside>
   <main className="main">
@@ -200,7 +202,14 @@ function App(){
     <label>Purpose <select value={uploadPurpose} onChange={e=>setUploadPurpose(e.target.value)}><option value="GENERATED_IMAGE">Generated image</option><option value="DESIGN_INSPIRATION">Design inspiration</option><option value="REFERENCE">Reference</option><option value="OTHER">Other</option></select></label>
     <label>Tags <input maxLength={360} value={uploadTags} onChange={e=>setUploadTags(e.target.value)} placeholder="agent, diagram, concept"/></label>
    </div><button type="submit" disabled={uploading||!uploadFile}>{uploading?'Archiving…':'Archive to private R2'}</button></form>}
-   {tab==='feed'?<ReferenceFeed path={feedPath} query={query} selected={selected} onOpen={setActive} onSelect={toggle}/>:<>
+   {tab==='feed'?<ReferenceFeed path={feedPath} axis={feedAxis} query={query} selected={selected}
+    onOpen={setActive} onSelect={toggle}
+    onChooseAxisValue={(field,value)=>{setFeedAxis(null);setFeedPath([{field,value}]);setTab('feed')}}
+    onToggleTag={tag=>{setFeedAxis(null);setFeedPath(current=>{
+     const others=current.filter(f=>f.field!=='tags');
+     return current.some(f=>f.field==='tags'&&f.value===tag)?others:[...others,{field:'tags',value:tag}];
+    });setTab('feed')}}
+    onClearFilters={()=>{setFeedPath([]);setFeedAxis(null)}}/>:<>
    {tab==='collections'&&<section className="collections-panel" aria-label="Your collections"><div className="section-title"><div><h2>Collections</h2><span>Server-backed, visible on your other authenticated devices</span></div></div>
     {collectionError&&<div role="alert" className="error"><AlertCircle size={16}/> {collectionError}</div>}
     <form className="collection-create" onSubmit={createCollection}><input aria-label="New collection name" maxLength={70} placeholder="New collection name" value={newCollection} onChange={e=>setNewCollection(e.target.value)}/><button disabled={!collectionsLoaded||collectionBusy||!newCollection.trim()||collections.collections.length>=40} type="submit"><FolderPlus size={15}/> Create{recorded.length?' with selected':''}</button></form>
