@@ -207,3 +207,77 @@
  .shell.feed-shell .nav-item{padding:8px 10px;min-height:32px;font-size:12px}
  .shell.feed-shell .rail-bottom{font-size:10px}
 }
+
+
+/* Reference explorer usability: entire rows are clickable (not only chevrons). */
+.feed-tree-axis,.feed-tree-row{
+ width:100%;font:inherit;text-align:left;border:0;color:#bfd0e7;cursor:pointer;
+ background:transparent;min-height:33px;padding-right:9px;border-radius:7px;
+}
+.feed-tree-axis{background:#162840;min-height:36px}
+.feed-tree-row:hover,.feed-tree-axis:hover{background:#284668;color:#fff}
+.feed-tree-axis:focus-visible,.feed-tree-row:focus-visible{
+ outline:2px solid #83b4ff;outline-offset:-2px;background:#254366
+}
+.feed-tree-axis .tree-name,.feed-tree-row .tree-name{pointer-events:none}
+.feed-tree-axis .tree-counter,.feed-tree-row .tree-counter{pointer-events:none}
+.feed-tree-axis[aria-expanded=true]{background:#1e3655}
+
+/* Reference feed: responsive 2/3/4-card layout with visible dates and readable previews. */
+.reference-feed-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:15px}
+.reference-feed-list.feed-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.reference-feed-list.feed-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.reference-feed-list.feed-cols-4{grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.feed-grid-item{min-width:0;display:flex;flex-direction:column}
+.reference-feed-card{height:100%;margin:0;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.feed-card-meta{padding:10px 12px;min-height:38px;flex-wrap:wrap;line-height:1.3}
+.feed-card-meta time{display:flex;align-items:center;gap:5px;color:#9bb1cf;font-size:10px;white-space:nowrap}
+.feed-card-layout{display:flex;flex-direction:column;gap:12px;padding:11px;flex:1;min-width:0}
+.feed-card-media{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ grid-template-rows:minmax(0,1fr);height:220px;max-height:none;min-height:0;
+ gap:5px;flex-shrink:0;overflow:hidden
+}
+.feed-card-media.has-multiple{grid-template-rows:minmax(0,3fr) minmax(0,1fr)}
+.feed-card-cover{grid-column:1/-1;min-height:0}
+.feed-card-media button{min-width:0;min-height:0;width:100%;height:100%;overflow:hidden}
+.feed-card-media img{width:100%;height:100%;min-height:0;max-height:none;object-fit:contain}
+.feed-card-additional img{width:100%;height:100%;min-height:0;max-height:none}
+.feed-card-no-image{min-height:0;grid-column:1/-1;height:100%}
+.feed-card-content{gap:9px;min-width:0;flex:1}
+.feed-card-id{font-size:10px;color:#80a9e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.feed-card-content h3{
+ font-size:14px;line-height:1.4;overflow:hidden;display:-webkit-box;
+ -webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere;
+}
+.feed-card-content .feed-card-excerpt{
+ overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;
+ white-space:normal;line-height:1.55;font-size:12px
+}
+.feed-card-content .feed-card-note{
+ overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+ white-space:normal;font-size:11px
+}
+.feed-card-more{font-size:11px;color:#b8d1f0}
+.feed-card-more summary{cursor:pointer;color:#99bef7;list-style-position:inside;padding:2px 0}
+.feed-card-more summary:hover{text-decoration:underline}
+.feed-card-more p{margin:8px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.feed-card-tags{max-height:54px;overflow:hidden;flex-shrink:0}
+.feed-card-actions{margin-top:auto;justify-content:flex-start;padding-top:8px;gap:5px}
+.feed-card-actions button,.feed-card-actions a{padding:7px 8px;font-size:10px}
+.feed-card-actions>span{margin-left:0;flex-basis:100%;font-size:10px}
+.reference-feed-list.feed-cols-2 .feed-card-media{height:270px}
+.reference-feed-list.feed-cols-4 .feed-card-media{height:185px}
+.reference-feed-toolbar label{white-space:nowrap}
+@media(max-width:1250px){
+ .reference-feed-list.feed-cols-4{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .reference-feed-list.feed-cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:930px){
+ .reference-feed-list.feed-cols-2,.reference-feed-list.feed-cols-3,.reference-feed-list.feed-cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+ .reference-feed-list.feed-cols-2,.reference-feed-list.feed-cols-3,.reference-feed-list.feed-cols-4{grid-template-columns:minmax(0,1fr)}
+ .feed-card-media,.reference-feed-list.feed-cols-4 .feed-card-media{height:250px}
+ .reference-feed-list{gap:12px}
+}
