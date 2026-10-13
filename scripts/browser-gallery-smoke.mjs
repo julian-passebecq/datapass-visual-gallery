@@ -97,7 +97,17 @@ try{
  await page.getByRole('button',{name:'Collections',exact:true}).click();
  await page.locator('.collection-tab.current').waitFor();
  assert.ok((await page.locator('.collection-tab.current').innerText()).includes('Agent design board'));
+ // Owner scenario: Mongo folder tree must be visible even while Collections is selected.
+ await page.locator('.feed-tree').waitFor({state:'visible'});
+ await page.locator('.feed-tree-all').waitFor({state:'visible'});
+ await page.locator('.feed-tree').getByRole('button',{name:'Ai Agents',exact:true}).click();
+ await page.locator('.reference-feed-card').first().waitFor();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
+ assert.equal(await page.locator('.reference-feed-card').count(),2);
+ await page.getByRole('button',{name:'Collections',exact:true}).click();
+ await page.locator('.feed-tree').waitFor({state:'visible'});
  await page.getByRole('button',{name:'All media',exact:true}).click();
+ await page.locator('.feed-tree').waitFor({state:'visible'});
  await page.getByLabel('Search references or media').fill('agent cockpit');
  await page.getByRole('button',{name:'Search',exact:true}).click();
  await page.locator('.reference-card').first().waitFor();
