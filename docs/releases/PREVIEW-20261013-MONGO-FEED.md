@@ -67,3 +67,25 @@ Final outcome: verified protected preview deployment and synthetic CI for the ne
 - **No product or MongoDB changes beyond this targeted UI/automated-browser patch.** No `main` merge, public image transfer, direct Windows desktop control, new paid service, or claim of real owner-browser success.
 
 **Acceptance:** DVG-015 and DVG-UX-011 updated to require the persistent tree in Collections and every view. The owner should refresh the protected site while Collections is still selected and check that **MONGO CATEGORIES** appears under the Library menu without switching to Feed. Clicking Domains → Ai Agents should automatically open the filtered Reference feed. This live Edge verification and other V1 gates remain open.
+
+
+## Owner-observed follow-up — clickable category axes and multi-column feed (2026-10-13)
+
+The owner confirmed the permanent Mongo category sidebar and image-rich reference feed display real archived media in the authenticated Edge browser, but reported that the **Domains / Projects / Purposes / Scopes** rows were difficult to click and each reference used an entire horizontal line.
+
+### Implemented focused correction
+- Converted each tree axis and nested category into a **single full-width button** with a visible chevron and reference count; Enter/Space activation is provided by the native button. Clicking a root toggles its children; clicking a child selects its facet path and toggles its expansion. The sidebar remains visible across all gallery modes.
+- Changed chronological feed cards from full-width horizontal panels to a responsive grid, **3 columns by default**, optional 2/3/4 stored in the existing browser profile. Smaller viewports automatically reduce columns to two or one.
+- Cards retain dated source IDs, private archived images, titles, selected-item actions, original source links and topic tags. Text excerpts are clamped for compact layout, with **Full description** to reveal full stored summary/visual notes. No source data deletion or modifications.
+- Browser regression tests verify clicking the **right side** of the Domains/Projects/Purposes/Scopes axis row, persisted open/closed tree state, 2/3/4 columns and single-column behavior on mobile-sized viewports, plus existing comparison, image viewer, search, collections, import and export.
+
+### Exact publication and security receipt
+- **Deployed product runtime SHA:** `cdc2cc7c278ee0b3a2731eff6686bae258dbf183` on draft PR #3 branch.
+- GitHub Actions run **#141** / ID `38442410281`: `qualify` and `synthetic-browser` both **SUCCESS**, after correcting a prior assertion that incorrectly assumed a persisted folder was always collapsed. The source implementation was not changed to mask that test issue.
+- CI compiled Worker SHA-256 `67907adf0f7d1e8acf5495eae7b137cc43a86d48cb40c0138b858eeb800252f0`, 439542 UTF-8 bytes; synthetic PR checkout SHA `2785c9c5b2f667834b1309d07b56143ccbec9ee4` (not product SHA).
+- Cloudflare Worker upload succeeded only after exact SHA/byte validation and rechecking owner-only Access, protected destinations, KV index and R2 bindings. **Active deployment ID:** `d30a2407-d99a-490e-a76f-a4510dc17d7f`; version `661ced88-7c6d-496a-ab04-5b2d36873c5d` verified **100% active**.
+- Post-deployment checks confirmed unchanged owner-only Cloudflare Access, Worker/hostname coverage, private `datapass-media`, original `datapass-web-assets`, existing `CATALOG` KV binding and **113** indexed MongoDB references. No MongoDB or media writes.
+- Canonical acceptance updated: DVG-015 / DVG-016 and DVG-UX-011 / DVG-UX-012. Draft PR remains unmerged.
+
+### Live user acceptance remaining
+Authenticated owner should press Ctrl+Shift+R on the protected preview, click anywhere across **Domains / Projects / Purposes / Scopes**, expand and select a nested category, then use **Cards per row → 3 / 4** in Reference Feed. The source-backed real Edge visual and responsiveness verdict are **UNKNOWN until the owner tests the new version**. Remaining complete-V1 items are not waived.
