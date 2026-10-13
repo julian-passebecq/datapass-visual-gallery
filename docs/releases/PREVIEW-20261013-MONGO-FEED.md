@@ -89,3 +89,32 @@ The owner confirmed the permanent Mongo category sidebar and image-rich referenc
 
 ### Live user acceptance remaining
 Authenticated owner should press Ctrl+Shift+R on the protected preview, click anywhere across **Domains / Projects / Purposes / Scopes**, expand and select a nested category, then use **Cards per row → 3 / 4** in Reference Feed. The source-backed real Edge visual and responsiveness verdict are **UNKNOWN until the owner tests the new version**. Remaining complete-V1 items are not waived.
+
+
+## Owner UX follow-up — root axis exploration and compact/tagged cards (2026-10-13)
+
+**Source of request:** In authenticated Edge, clicking `Scopes` expanded the navigator without changing the feed; a full-width list wasted space, and the labels displayed on each reference card could not be clicked to search.
+
+### Delivered functional scope
+- Clicking a root category **Domains / Projects / Purposes / Scopes** now both toggles the left tree and opens that axis's named feed view. A read-only taxonomy request shows actual Mongo category values and counts. Clicking one value filters the feed.
+- The feed defaults to **4 cards per row** (previously 3) and still lets the owner choose 2/3/4; the local preference migrated to `dvl:feed-columns:v2` without erasing a prior two-column preference. Narrow screens automatically use fewer cards.
+- The reference cards use shorter, smaller titles and excerpt previews, while `Read full description` retains the complete stored summary and image-observation text.
+- Each card now shows up to two clickable tags, with `+N tags` to expand the rest. Clicking any tag filters references through the actual authenticated private `/api/feed` endpoint. Tag selection intersects the existing Mongo category path. A selected tag can be toggled off, and **Clear filters** is visible.
+- Backend facet-path parsing is safely expanded from 3 to 4 distinct fields, with explicit axis validation, cursor-fingerprint updates and zero-match behavior.
+- Existing media grid, original R2 objects, side-by-side comparison, Collections, import and favorites are unchanged. MongoDB was read-only.
+
+### Exact CI and private Cloudflare evidence
+- **Deployed source SHA:** `5b5e421d32ecb0e3cc7a94e2f681030ce3dea2b5` in draft PR #3.
+- GitHub Actions **run #163**, run ID `38445667660`: Worker `qualify` **SUCCESS** and `synthetic-browser` **SUCCESS**. Coverage includes root Scope axis, category value selection, default four-column layout, two/three/four layouts, mobile single column, extra-tag expansion and a click-to-filter/toggle journey, plus existing gallery workflows. The initial failed test expected titlecase `Datapass` instead of source-preserved `DATAPASS`; corrected the case-sensitive assertion without modifying the source classification.
+- CI compiled Worker SHA-256: `32a5f814dfd0448b5699b79e707040df6dc68f7c84fe60649bb8f967e50cb961`, **451680** UTF-8 bytes. CI synthetic PR checkout SHA `c332482af90602af12dcb19b59ab269c4555c17f` is not the product runtime SHA.
+- Cloudflare Worker upload returned HTTP 200 after verification of the exact script byte count and digest. Active deployment ID: `c6b3cfba-fa01-4034-87af-74816264da35`, active Worker version `a311120e-0058-466e-871d-fe67655c760b` **100%**.
+- Post-deploy verified owner-only Access, Worker and hostname protection, existing R2 bindings `datapass-media` and `datapass-web-assets`, private KV `CATALOG` binding and the same **113** Mongo-derived private reference records. No Atlas write, new service subscription, public asset publish or change to original image bytes.
+- Product-owned acceptance changed: DVG-015/016/017, DVG-UX-011/012/013. Historical receipts remain intact.
+
+### Not yet qualified
+- Actual owner Windows Edge click-through and rendering after this update remain **UNKNOWN**, despite successful GitHub-hosted synthetic Chromium.
+- Live semantic similarity, automatic Mongo sync/intake, true reduced-byte thumbnails, approved public asset publication and the separate Edge extension qualification remain outstanding V1/R&D gates.
+- No merge to main, no unrelated repository write, no force push and no Windows desktop attestation.
+
+### Owner test
+Hard refresh the authenticated preview. Click `Scopes` and inspect the new Scopes heading and value/count chips; click a scope to filter. In the feed, use **Cards per row: 4**, then choose **+N tags** on a card and click one of its tags. Verify the visible filter, its count, and **Clear filters**. Check full-description expansion and an image in the original viewer.
