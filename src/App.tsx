@@ -174,12 +174,12 @@ function App(){
   }catch(err){setNotice('Import error: '+readableError(err))}
   finally{setUploading(false)}
  }
- return <div className={'shell '+(tab==='feed'?'feed-shell':'')}>
+ return <div className="shell feed-shell">
   <aside className="rail">
    <div className="brand"><span className="brand-icon"><Images size={22}/></span><div><strong>DataPass</strong><small>Visual Library</small></div></div>
    <p className="nav-label">LIBRARY</p>
    <nav aria-label="Media sources">{SOURCES.map(t=><button key={t.value} className={'nav-item '+(tab===t.value?'current':'')} onClick={()=>setTab(t.value)}>{t.value==='feed'?<Rss size={16}/>:<FolderOpen size={16}/>}<span>{t.label}</span>{t.value==='selected'&&selected.size>0?<em>{selected.size}</em>:null}</button>)}</nav>
-   {tab==='feed'&&<FeedCategoryTree path={feedPath} onSelect={setFeedPath}/> }
+   <FeedCategoryTree path={feedPath} onSelect={path=>{setFeedPath(path);setTab('feed')}}/>
    <div className="rail-bottom"><ShieldCheck size={15}/><span>Private by default. Imports are never published automatically.</span></div>
   </aside>
   <main className="main">
