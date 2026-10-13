@@ -9,6 +9,8 @@ const paths=['originals/test-fixtures/agent-cockpit.png','originals/test-fixture
 const record=(key,title,source='private')=>({id:source+':'+key,source,key,title,size:22000,mime:'image/png',url:'/api/file/'+(source==='generated'?'private':source)+'/'+key});
 const imported='originals/gallery-import/2026-10-12/generated-example.png';
 const media=[record(paths[0],'Agent cockpit'),record(paths[1],'Architecture diagram')];
+const referenceTags={'VR-TEST-001':['cockpit','workflow','agents','architecture'],'VR-TEST-002':['diagram','workflow'],'REF-TEST-003':['article']};
+const referenceScopes={'VR-TEST-001':['DATAPASS'],'VR-TEST-002':['DATA_ENGINEERING'],'REF-TEST-003':['DATAPASS']};
 let state={schema:'datapass.visual-gallery.collections/1',revision:'initial',collections:[],favorites:[],updatedAt:''};
 let importCalls=0,saveCalls=0;
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(PORT),'--strictPort'],{stdio:['ignore','pipe','pipe']});
@@ -39,15 +41,16 @@ try{
     assets:[{source:'private',key:paths[0],url:'/api/file/private/'+paths[0],title:'Agent cockpit',mime:'image/png'}]}]:[]}));
   }
   if(path==='/api/taxonomy'){
-   const entries=[['VR-TEST-001','ai-agents','agent-vscode','agent-ui'],['VR-TEST-002','ai-agents','datapass-pm','agent-ui'],['REF-TEST-003','data-engineering','datapass-bi','fabric']].map(([id,domain,route,topic])=>({id,domains:[domain],routes:[route],topics:[topic],tags:['reference'],scopes:['DATAPASS'],purposes:['REFERENCE'],hasMedia:id!=='REF-TEST-003'}));
+   const entries=[['VR-TEST-001','ai-agents','agent-vscode','agent-ui'],['VR-TEST-002','ai-agents','datapass-pm','agent-ui'],['REF-TEST-003','data-engineering','datapass-bi','fabric']].map(([id,domain,route,topic])=>({id,domains:[domain],routes:[route],topics:[topic],tags:referenceTags[id],scopes:referenceScopes[id],purposes:['REFERENCE'],hasMedia:id!=='REF-TEST-003'}));
    return route.fulfill(json({schema:'datapass.visual-gallery.taxonomy/1',snapshotAt:'2026-10-13T08:00:00Z',count:entries.length,entries}));
   }
   if(path==='/api/feed'){
    const data=[{id:'VR-TEST-001',title:'Agent cockpit',domain:'ai-agents',route:'agent-vscode',topic:'agent-ui',key:paths[0]},{id:'VR-TEST-002',title:'Architecture diagram',domain:'ai-agents',route:'datapass-pm',topic:'agent-ui',key:paths[1]},{id:'REF-TEST-003',title:'Learning article',domain:'data-engineering',route:'datapass-bi',topic:'fabric',key:null}];
    const steps=url.searchParams.get('path')?JSON.parse(atob(url.searchParams.get('path'))):[];
    const q=(url.searchParams.get('q')||'').toLowerCase();
-   const matched=data.filter(x=>steps.every(s=>({domains:[x.domain],routes:[x.route],topics:[x.topic],tags:['reference'],scopes:['DATAPASS'],purposes:['REFERENCE']}[s.field]||[]).includes(s.value))&&(!q||x.title.toLowerCase().includes(q))&&(url.searchParams.get('media')!=='images'||x.key));
-   const entries=matched.map(x=>({id:x.id,title:x.title,summary:'A synthetic design reference',visual:'',date:'2026-10-12T00:00:00Z',kind:x.key?'screenshot':'article',domains:[x.domain],routes:[x.route],purposes:['REFERENCE'],topics:[x.topic],tags:['reference'],assets:x.key?[{source:'private',key:x.key,url:'/api/file/private/'+x.key,title:x.title,mime:'image/png'}]:[]}));
+   const axis=url.searchParams.get('axis');
+   const matched=data.filter(x=>steps.every(s=>({domains:[x.domain],routes:[x.route],topics:[x.topic],tags:referenceTags[x.id],scopes:referenceScopes[x.id],purposes:['REFERENCE']}[s.field]||[]).includes(s.value))&&(!axis||({domains:[x.domain],routes:[x.route],topics:[x.topic],tags:referenceTags[x.id],scopes:referenceScopes[x.id],purposes:['REFERENCE']}[axis]||[]).length>0)&&(!q||x.title.toLowerCase().includes(q))&&(url.searchParams.get('media')!=='images'||x.key));
+   const entries=matched.map(x=>({id:x.id,title:x.title,summary:'A synthetic design reference',visual:'Synthetic visual description',date:'2026-10-12T00:00:00Z',kind:x.key?'screenshot':'article',domains:[x.domain],routes:[x.route],purposes:['REFERENCE'],topics:[x.topic],tags:referenceTags[x.id],assets:x.key?[{source:'private',key:x.key,url:'/api/file/private/'+x.key,title:x.title,mime:'image/png'}]:[]}));
    return route.fulfill(json({schema:'datapass.visual-gallery.feed/1',snapshotAt:'2026-10-13T08:00:00Z',total:entries.length,entries,hasMore:false,source:'MongoDB snapshot'}));
   }
   if(path==='/api/collections'&&method==='GET')return route.fulfill(json(state));
@@ -126,25 +129,37 @@ try{
  assert.equal(await page.locator('.reference-feed-card').count(),3);
  // Feed must display several compact cards per row, including 4-column option.
  const feedColumns=page.getByLabel('Feed columns');
- assert.equal(await feedColumns.inputValue(),'3');
+ assert.equal(await feedColumns.inputValue(),'4');
  const columnCount=()=>page.locator('.reference-feed-list').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length);
+ assert.equal(await columnCount(),4);
+ await feedColumns.selectOption('3');
  assert.equal(await columnCount(),3);
  await feedColumns.selectOption('4');
  assert.equal(await columnCount(),4);
- assert.equal(await page.evaluate(()=>localStorage.getItem('dvl:feed-columns:v1')),'4');
+ assert.equal(await page.evaluate(()=>localStorage.getItem('dvl:feed-columns:v2')),'4');
  await feedColumns.selectOption('2');
  assert.equal(await columnCount(),2);
- await feedColumns.selectOption('3');
+ await feedColumns.selectOption('4');
  // A category header is one full-width button: clicking the count side must expand it.
  for(const name of ['Projects','Purposes','Scopes']){
-  const axis=page.locator('.feed-tree').getByRole('button',{name,exact:true});
-  const initial=await axis.getAttribute('aria-expanded');
-  const bounds=await axis.boundingBox();assert.ok(bounds&&bounds.width>120,name+' click target too narrow');
-  await axis.click({position:{x:bounds.width-8,y:bounds.height/2}});
-  assert.notEqual(await axis.getAttribute('aria-expanded'),initial,name+' did not toggle from row end');
-  await axis.click();
-  assert.equal(await axis.getAttribute('aria-expanded'),initial);
+  const axisButton=page.locator('.feed-tree').getByRole('button',{name,exact:true});
+  const initial=await axisButton.getAttribute('aria-expanded');
+  const bounds=await axisButton.boundingBox();assert.ok(bounds&&bounds.width>120,name+' click target too narrow');
+  await axisButton.click({position:{x:bounds.width-8,y:bounds.height/2}});
+  assert.notEqual(await axisButton.getAttribute('aria-expanded'),initial,name+' did not toggle from row end');
+  // Clicking a root axis must show an overview in the feed, not only expand the tree.
+  await page.getByRole('heading',{name,exact:true}).waitFor();
+  await page.locator('.feed-axis-options').first().waitFor();
+  await axisButton.click();
+  assert.equal(await axisButton.getAttribute('aria-expanded'),initial);
  }
+ await page.locator('.feed-tree').getByRole('button',{name:'Scopes',exact:true}).click();
+ await page.getByRole('heading',{name:'Scopes',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Filter Scopes by Datapass'}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
+ assert.ok((await page.locator('.reference-feed-head h2').innerText()).includes('Datapass'));
+ await page.getByRole('button',{name:'Clear all category and tag filters'}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
  const agentBranch=page.getByRole('button',{name:'Ai Agents',exact:true});
  const wasExpanded=await agentBranch.getAttribute('aria-expanded');
  await agentBranch.click();
@@ -163,14 +178,24 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
  await page.getByLabel('Feed media filter').selectOption('images');
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
+ await page.getByLabel('Feed media filter').selectOption('all');
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
+ // Tags beyond the first two are collapsed; clicking one performs a real facet search.
+ const cockpit=page.locator('.reference-feed-card').filter({hasText:'Agent cockpit'});
+ await cockpit.getByText('+2 tags').click();
+ await cockpit.getByRole('button',{name:'Filter by tag agents'}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===1);
+ assert.ok((await page.locator('.reference-feed-head h2').innerText()).includes('#agents'));
+ await page.locator('.reference-feed-card').getByRole('button',{name:'Remove filter for tag agents'}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
  // Narrow screen must become a single column without horizontal clipping.
  await page.setViewportSize({width:620,height:820});
  assert.equal(await columnCount(),1);
  await page.setViewportSize({width:1400,height:960});
- assert.equal(await columnCount(),3);
+ assert.equal(await columnCount(),4);
  await mkdir('artifacts/synthetic',{recursive:true});
  await page.screenshot({path:'artifacts/synthetic/visual-gallery.png',fullPage:false});
- console.log('PASS: 2/3/4-column feed, responsive cards, full-row facet clicks, nested filtering, gallery and media journeys');
+ console.log('PASS: Scopes root overview, clickable Mongo chips, compact default four-column feed, collapsible tags, and prior gallery journeys');
 }finally{
  await browser?.close();
  server.kill('SIGTERM');
