@@ -190,3 +190,12 @@
  .feed-card-content h3{font-size:15px}
  .reference-feed-head h2{font-size:19px}
 }
+
+/* Persistent reference explorer on every gallery surface, not just the Feed tab. */
+.shell.feed-shell .rail{align-self:start}
+.shell.feed-shell .feed-tree{min-height:170px}
+.shell.feed-shell .rail nav{flex-shrink:0}
+@media(max-width:900px){
+ .shell.feed-shell .rail{align-self:stretch}
+ .shell.feed-shell .feed-tree{min-height:175px}
+}
