@@ -8,3 +8,5 @@ DVG-UX-006,V1,Create/import,Import generated image with classification,only appr
 DVG-UX-007,V1,Edge,Search capture and open from existing extension,non-destructive integration and user consent,STAGED_LAUNCHER
 DVG-UX-008,V1,Security,Private images never exposed to anonymous user,Access token negative tests and browser network verification,NOT_QUALIFIED
 DVG-UX-009,V1,Gallery performance,Bounded pagination and lazy gallery images with future reduced-payload thumbnails,exact R2 cursor and lazy decoding passed CI85 but original bytes still transferred,PARTIAL
+DVG-UX-010,V1,Reference feed,Chronological cards with source data and linked media,Authenticated feed includes image and link references with stable IDs,IMPLEMENTED_SYNTHETIC_QUALIFIED
+DVG-UX-011,V1,Reference categories,Collapsible multi-level tree using existing Mongo classifications,Domains projects purposes and nested topics filter correctly,IMPLEMENTED_SYNTHETIC_QUALIFIED
