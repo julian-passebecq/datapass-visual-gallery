@@ -50,3 +50,20 @@ Build a Flus-inspired stream of archived references and images (not conversation
 7. Report screenshot and unexpected behavior. This is required before real-browser acceptance.
 
 Final outcome: verified protected preview deployment and synthetic CI for the new feed/tree; actual Edge UX still requires owner inspection.
+
+
+## Focused persistent-sidebar correction — 2026-10-13 evening
+
+**Owner screenshot evidence:** while **Collections** was active, `Reference feed` appeared in the library navigation but the MongoDB tree was invisible. The initial code mounted `FeedCategoryTree` only if `tab==='feed'`, so the existing behavior was a discoverability defect, not a missing Mongo classification or Access failure.
+
+**Fix:** The VS Code-style MongoDB category navigator is now persistently mounted in the left sidebar on all library tabs (Collections, All media, Private references, Generated & imported, Web assets, Favorites, Selected and Reference feed). Clicking any category selects its path and automatically changes to the filtered Reference feed. The existing selected-image/export/collection state is preserved. The sidebar receives its own scrollable tree area, and desktop navigation spacing was tightened to leave room on shorter Edge windows.
+
+**Exact qualified and deployed runtime:**
+- Product SHA: `bfda81fedb4389106b563f9df38322ba8e2fd4be` on this draft PR #3 branch, derived from the previous qualified feed baseline.
+- GitHub Actions **run #126** (`38437860045`): **SUCCESS** in Worker qualify and synthetic Chromium. The Chromium test specifically starts in Collections with existing selections, verifies tree visibility, chooses an Agents category, checks the filtered feed, then returns to library modes and confirms the tree stays visible.
+- Packaged Worker SHA-256 `e3b2f0e20ccdf883fea8a7a4833876e61ec32d2ec028e7061b70a3dee615f8bf`, 432774 bytes; CI checkout SHA `5210d19aa8231f02d24806e7e40005ea45802bb1` is not the product commit.
+- **Active protected Cloudflare deployment** `50ff0e1e-0a0d-4223-aae0-1f11ec482bf7`; Worker version `42ad5472-55dc-4381-8beb-2699fc99b12b` at **100%**.
+- Post-deploy Cloudflare checks: same owner-only Access rule covering Worker and preview hostname; `PRIVATE_MEDIA=datapass-media`, `WEB_ASSETS=datapass-web-assets` and `CATALOG` unchanged; the private catalog still contains 113 Mongo references.
+- **No product or MongoDB changes beyond this targeted UI/automated-browser patch.** No `main` merge, public image transfer, direct Windows desktop control, new paid service, or claim of real owner-browser success.
+
+**Acceptance:** DVG-015 and DVG-UX-011 updated to require the persistent tree in Collections and every view. The owner should refresh the protected site while Collections is still selected and check that **MONGO CATEGORIES** appears under the Library menu without switching to Feed. Clicking Domains → Ai Agents should automatically open the filtered Reference feed. This live Edge verification and other V1 gates remain open.
