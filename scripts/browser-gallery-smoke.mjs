@@ -106,6 +106,7 @@ try{
  assert.equal(await page.locator('.reference-feed-card').count(),2);
  await page.getByRole('button',{name:'Collections',exact:true}).click();
  await page.locator('.feed-tree').waitFor({state:'visible'});
+ await page.locator('.feed-tree-all').click();
  await page.getByRole('button',{name:'All media',exact:true}).click();
  await page.locator('.feed-tree').waitFor({state:'visible'});
  await page.getByLabel('Search references or media').fill('agent cockpit');
