@@ -108,9 +108,27 @@ try{
  await page.getByRole('button',{name:'Generated & imported'}).click();
  await page.locator('.media').filter({hasText:'Imported mock screenshot'}).waitFor();
  assert.equal(importCalls,1);assert.ok(saveCalls>=1);
+ await page.getByLabel('Search references or media').fill('');
+ await page.getByRole('button',{name:'Search',exact:true}).click();
+ await page.getByRole('button',{name:'Reference feed',exact:true}).click();
+ await page.locator('.reference-feed-card').first().waitFor();
+ assert.equal(await page.locator('.reference-feed-card').count(),3);
+ await page.getByRole('button',{name:'Ai Agents',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
+ await page.getByRole('button',{name:'Expand Ai Agents'}).click();
+ await page.getByRole('button',{name:'Agent Ui',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
+ await page.getByRole('button',{name:'Open Agent cockpit media 1'}).click();
+ await page.getByRole('dialog',{name:'Media viewer'}).waitFor();
+ await page.keyboard.press('Escape');
+ await page.getByRole('dialog',{name:'Media viewer'}).waitFor({state:'hidden'});
+ await page.locator('.feed-tree-all').click();
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
+ await page.getByLabel('Feed media filter').selectOption('images');
+ await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
  await mkdir('artifacts/synthetic',{recursive:true});
  await page.screenshot({path:'artifacts/synthetic/visual-gallery.png',fullPage:false});
- console.log('PASS: synthetic desktop gallery compare, zoom, selected JSON download, collections persistence, reference lookup and private import');
+ console.log('PASS: synthetic gallery and Mongo feed with category tree, viewer, reference link and media filter');
 }finally{
  await browser?.close();
  server.kill('SIGTERM');
