@@ -9,7 +9,7 @@ interface StoredImage { source:Source;key:string;title:string;mime?:string }
 interface GalleryCollection {id:string;name:string;items:StoredImage[];createdAt:string;updatedAt:string}
 interface GalleryState {schema:string;revision:string;collections:GalleryCollection[];favorites:string[];updatedAt:string}
 interface CatalogAsset {key:string;mime?:string|null;asset_id?:string}
-interface Reference {id:string;title:string;summary:string;visual:string;aliases:string[];search_text:string;tags:string[];topics:string[];domains:string[];routes:string[];scopes:string[];purposes:string[];visual_elements:string[];assets:CatalogAsset[]}
+interface Reference {id:string;title:string;summary:string;visual:string;aliases:string[];search_text:string;tags:string[];topics:string[];domains:string[];routes:string[];scopes:string[];purposes:string[];visual_elements:string[];created_at?:string;source_kind?:string;source_url?:string;assets:CatalogAsset[]}
 interface CatalogSnapshot {schema:string;refreshed_at:string;references:Reference[]}
 const KEY='catalog-v1';
 const PREFIX='collections-v1:';
@@ -121,4 +121,120 @@ export async function importImage(req:Request,env:GalleryEnv):Promise<Response>{
  const date=new Date().toISOString().slice(0,10),key=IMPORT_PREFIX+date+'/'+crypto.randomUUID()+'.'+type.ext;
  await env.PRIVATE_MEDIA.put(key,body,{httpMetadata:{contentType:type.mime},customMetadata:{purpose,title:name,tags:JSON.stringify(tags),sha256:sha,intake_status:'PENDING_REFERENCE_INTAKE'}});
  return response({status:'archived_private',intake:'PENDING_REFERENCE_INTAKE',item:{id:'generated:'+key,source:'generated',key,title:name,mime:type.mime,size:body.length,url:fileURL('generated',key)},sha256:sha},201);
+}
+
+
+/** Faceted virtual navigation built only from metadata already classified in MongoDB.
+ * The axes are not parent-child facts in MongoDB; overlapping categories are intentional.
+ */
+type FacetField='domains'|'routes'|'purposes'|'scopes'|'topics'|'tags';
+interface FacetStep { field:FacetField;value:string }
+const fields=new Set<FacetField>(['domains','routes','purposes','scopes','topics','tags']);
+const NONE='__unclassified__';
+function validPath(raw:string|null):FacetStep[]|null{
+ if(!raw)return [];
+ if(raw.length>1800)return null;
+ try{
+  const parsed=JSON.parse(atob(raw)) as unknown;
+  if(!Array.isArray(parsed)||parsed.length>4)return null;
+  const path:FacetStep[]=[];
+  for(const item of parsed){
+   if(!item||typeof item!=='object')return null;
+   const step=item as Partial<FacetStep>;
+   if(!step.field||!fields.has(step.field)||typeof step.value!=='string'||!step.value||step.value.length>160)return null;
+   if(path.some(x=>x.field===step.field))return null;
+   path.push({field:step.field,value:step.value});
+  }
+  return path;
+ }catch{return null}
+}
+function strings(input:unknown):string[]{return Array.isArray(input)?input.filter((x):x is string=>typeof x==='string'):[]}
+function onPath(ref:Reference,path:FacetStep[]):boolean{
+ return path.every(({field,value})=>{
+  const values=strings(ref[field]);
+  return value===NONE?values.length===0:values.includes(value);
+ });
+}
+function safeSource(value:unknown):string|undefined{
+ if(typeof value!=='string')return undefined;
+ try{
+  const u=new URL(value);
+  return u.protocol==='https:'?u.toString().slice(0,1000):undefined;
+ }catch{return undefined}
+}
+function feedItem(ref:Reference){
+ return {
+  id:ref.id,title:ref.title,summary:ref.summary,visual:ref.visual,
+  date:typeof ref.created_at==='string'?ref.created_at:'',
+  kind:typeof ref.source_kind==='string'?ref.source_kind:'reference',
+  sourceUrl:safeSource(ref.source_url),
+  domains:strings(ref.domains),routes:strings(ref.routes),purposes:strings(ref.purposes),
+  topics:strings(ref.topics),tags:strings(ref.tags),
+  assets:ref.assets.filter(a=>a&&typeof a.key==='string'&&a.key.startsWith('originals/')&&a.key.length<800)
+   .slice(0,12).map(a=>({source:'private',key:a.key,url:fileURL('private',a.key),
+    title:ref.title,mime:a.mime||'image/png',assetId:a.asset_id||null}))
+ };
+}
+async function readSnapshot(env:GalleryEnv):Promise<CatalogSnapshot|null>{
+ if(!env.CATALOG)return null;
+ const x=await env.CATALOG.get(KEY,'json') as CatalogSnapshot|null;
+ return x&&x.schema==='datapass.visual-gallery.catalog/1'&&Array.isArray(x.references)?x:null;
+}
+export async function taxonomy(req:Request,env:GalleryEnv):Promise<Response>{
+ if(new URL(req.url).search)return err('Unknown taxonomy parameters',400);
+ const snapshot=await readSnapshot(env);
+ if(!snapshot)return err('MongoDB reference snapshot unavailable',503);
+ // This metadata-only endpoint needs complete category coverage to avoid false counts.
+ if(snapshot.references.length>5000)return err('Category index exceeds bounded view; refresh index or use server-side facets',503);
+ const entries=snapshot.references.map(r=>({
+  id:r.id,domains:strings(r.domains),routes:strings(r.routes),purposes:strings(r.purposes),
+  scopes:strings(r.scopes),topics:strings(r.topics),tags:strings(r.tags),
+  hasMedia:Array.isArray(r.assets)&&r.assets.length>0
+ }));
+ return response({schema:'datapass.visual-gallery.taxonomy/1',snapshotAt:snapshot.refreshed_at,
+  count:entries.length,entries,semantics:'derived-facets-not-mongo-folders'});
+}
+export async function referenceFeed(req:Request,env:GalleryEnv):Promise<Response>{
+ const snapshot=await readSnapshot(env);
+ if(!snapshot)return err('MongoDB reference snapshot unavailable',503);
+ const p=new URL(req.url).searchParams;
+ const path=validPath(p.get('path'));if(path===null)return err('Invalid category path',400);
+ const axisParam=p.get('axis')||'';
+ if(axisParam&&!fields.has(axisParam as FacetField))return err('Invalid category axis',400);
+ const axis=axisParam as FacetField|'';
+ const rawQuery=(p.get('q')||'').trim();
+ if(rawQuery.length>180)return err('Search query too long',400);
+ const q=rawQuery.toLowerCase();
+ const media=p.get('media')||'all';if(media!=='all'&&media!=='images')return err('Invalid media filter',400);
+ const order=p.get('order')||'newest';if(order!=='newest'&&order!=='oldest')return err('Invalid feed order',400);
+ const rawLimit=Number(p.get('limit')||20);
+ const limit=Number.isInteger(rawLimit)?Math.max(1,Math.min(50,rawLimit)):20;
+ const cursor=p.get('cursor')||'';
+ const fingerprint=JSON.stringify([path,q,media,order,axis]);
+ let offset=0;
+ if(cursor){
+  if(cursor.length>2400)return err('Invalid feed cursor',400);
+  try{
+   const c=JSON.parse(atob(cursor)) as {o:number;f:string;s:string};
+   if(!Number.isInteger(c.o)||c.o<0||c.o>500000||c.f!==fingerprint||c.s!==snapshot.refreshed_at)throw Error('cursor');
+   offset=c.o;
+  }catch{return err('Feed cursor expired or filter mismatch',409)}
+ }
+ const filtered=snapshot.references.filter(r=>
+   onPath(r,path)&&(!axis||strings(r[axis]).length>0)&&
+   (media==='all'||Array.isArray(r.assets)&&r.assets.length>0)&&
+   (!q||[r.id,r.title,r.summary,r.visual,r.search_text,
+     ...strings(r.domains),...strings(r.routes),...strings(r.purposes),
+     ...strings(r.topics),...strings(r.tags),...strings(r.aliases)]
+    .some(x=>typeof x==='string'&&x.toLowerCase().includes(q)))
+ );
+ const date=(r:Reference)=>{
+  const d=Date.parse(r.created_at||'');
+  return Number.isFinite(d)?d:0;
+ };
+ filtered.sort((a,b)=>order==='newest'?(date(b)-date(a)||a.id.localeCompare(b.id)):(date(a)-date(b)||a.id.localeCompare(b.id)));
+ const next=offset+limit<filtered.length?btoa(JSON.stringify({o:offset+limit,f:fingerprint,s:snapshot.refreshed_at})):undefined;
+ return response({schema:'datapass.visual-gallery.feed/1',snapshotAt:snapshot.refreshed_at,
+  source:'MongoDB read-only snapshot',axis:axis||null,total:filtered.length,
+  entries:filtered.slice(offset,offset+limit).map(feedItem),cursor:next,hasMore:Boolean(next)});
 }

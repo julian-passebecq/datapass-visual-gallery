@@ -18,6 +18,14 @@ The review branch `feat/gallery-search-collections-import-v1` adds weighted **Mo
 
 A review-only update adds **two-image compare**, zoom, compact/large card sizes and bounded R2 pagination. CI run #85 passed both Worker qualification and synthetic Chromium interaction checks; current owner-only Cloudflare preview is deployed at the same URL. Real archive comparison and anonymous-access browser testing remain pending, and full-size originals are still downloaded as images become visible. No new Cloudflare Images subscription was activated. [Latest release receipt](docs/releases/PREVIEW-20261012-COMPARE-PAGINATION.md).
 
+## Reference Feed — protected preview (2026-10-13)
+
+The gallery now has **Reference feed** beside the existing grid. An expandable left tree groups the **113 currently indexed MongoDB references** by Domains → Topics → Tags, Projects → Domains → Topics, Purposes and Scopes. The hierarchy is a non-destructive multi-label view of original MongoDB fields, not stored folders. The main feed shows chronological reference cards, linked private images and text/link-only research.
+
+Current owner-only preview: **https://datapass-visual-gallery-preview.datapass.workers.dev/**. The code passed CI #105 (including synthetic browser tests) and the protected Worker is deployed; the owner still needs to verify it in real Edge. Existing media grid, comparisons, saved Collections and imports remain available.
+
+The Mongo projection is read-only and stored privately in Cloudflare KV; it is **not a continuously live Atlas connection**. Latest deployment and source evidence: [Mongo Feed receipt](docs/releases/PREVIEW-20261013-MONGO-FEED.md), [draft PR #3](https://github.com/julian-passebecq/datapass-visual-gallery/pull/3).
+
 ## Product
 
 - Responsive grid/list library and full-size viewer, source filters, safe server-side R2 listing and filename/path search.

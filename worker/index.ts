@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { queryCatalog, getCollections, putCollections, importImage } from './library';
+import { queryCatalog, getCollections, putCollections, importImage, taxonomy, referenceFeed } from './library';
 import type { GalleryEnv } from './library';
 
 interface Env extends GalleryEnv {
@@ -113,6 +113,8 @@ export default {async fetch(request:Request,env:Env):Promise<Response>{
   if(request.method!=='GET'&&request.method!=='HEAD')return json({error:'Method not allowed'},405);
   if(url.pathname==='/api/health')return json({ok:true,authenticated:true,storage:['private','public'],catalog:Boolean(env.CATALOG)});
   if(url.pathname==='/api/references'&&request.method==='GET')return queryCatalog(request,env);
+  if(url.pathname==='/api/taxonomy'&&request.method==='GET')return taxonomy(request,env);
+  if(url.pathname==='/api/feed'&&request.method==='GET')return referenceFeed(request,env);
   if(url.pathname==='/api/media'&&request.method==='GET')return list(request,env);
   if(url.pathname.startsWith('/api/file/'))return file(request,env,url.pathname.slice('/api/file/'.length));
   if(url.pathname.startsWith('/api/'))return json({error:'Not found'},404);

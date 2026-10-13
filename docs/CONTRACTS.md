@@ -24,3 +24,31 @@ Selections include saved image metadata across pages and filters, so export cann
 The listing endpoint now returns **no more than the requested** limit (1-100) with an opaque cursor containing its current bucket page and intra-page offset. A cursor is only valid with its original source and case-normalized filename query; mismatch is rejected. Generated imports remain in private R2 and receive the generated source label. R2 listing is bounded to eight upstream pages per response and may return a smaller page plus continuation when a filename query has sparse matches. This avoids the former behavior of returning an entire large R2 page when the UI only requested 80 items. The cursor is not a secret or authorization token; every request still requires owner Cloudflare Access authentication.
 
 The website adds local-only two-image comparison and zoom; no media is moved or published. Adjustable card size and native lazy image decoding reduce off-screen rendering work. **These do not downscale original image payloads**. Cloudflare Images transformation binding requires separate subscription/billing approval or a separately designed offline thumbnail pipeline; no new paid dependency is introduced by this increment.
+
+
+## Private MongoDB-derived reference feed
+
+`GET /api/taxonomy` returns `{schema:"datapass.visual-gallery.taxonomy/1",snapshotAt,count,entries,semantics}`. Each entry is a reference ID with classified `domains`, `routes`, `purposes`, `scopes`, `topics`, `tags`, and `hasMedia`. Requires Cloudflare Access JWT. It does not update MongoDB or expose source files without Access. A complete bounded snapshot (up to 5000 references) is required for truthful category counts.
+
+`GET /api/feed?limit=24&q=&order=newest|oldest&media=all|images&path=<opaque-base64-JSON>&cursor=<opaque>` returns `{schema:"datapass.visual-gallery.feed/1",snapshotAt,source,total,entries,cursor?,hasMore}`. Path is a JSON array of at most three distinct field/value predicates on existing classifications. Predicate combinations are AND; the source's multi-valued fields may place the same reference in multiple branches. Missing categories use `__unclassified__`. User path/cursor parsing is bounded and rejects invalid fields and stale cursor/filter combinations. Feed results preserve stable Mongo `reference_id`, dates, source kind, summary and exact protected `/api/file/private/...` links. External source link is allowed only for original HTTPS reference sources.
+
+**A domain → topic → tag tree is a virtual facet UI, not MongoDB's authored folder relationship.** Curated Collections remain a separate product-owned user store. The read-only snapshot is regenerated explicitly from `reference_memory.references` and `assets` and stored at private KV key `catalog-v1`; it is **not** continuously updated. This feature does not use an LLM, clone Mongo collections into public Git, or expose unauthenticated objects.
+
+
+## Facet root overview and clickable tags (2026-10-13)
+
+The **root axis** buttons Domains/Projects/Purposes/Scopes select the corresponding feed overview and toggle their sidebar tree group. The feed fetches only the existing read-only `GET /api/taxonomy` projection to render actual value/count chips. Selecting a chip creates a first-class category path. A root view does not invent one MongoDB folder: it explicitly shows the chosen axis and its concrete values.
+
+`GET /api/feed` now optionally accepts `axis=domains|routes|purposes|scopes|topics|tags`, validated against known facet names. When set, it includes only references classified under that axis. Changing `axis` invalidates the cursor fingerprint. The existing base64 JSON `path` now permits **up to 4 distinct facet fields** (previously 3), retaining AND intersection semantics. Duplicate field names, invalid values, unmatched tag filters, and malformed paths retain explicit failure/empty-result behavior.
+
+A card's `tags[]` values from the private MongoDB reference snapshot are filter controls, not decorations. Selecting a tag replaces any previous tag predicate while retaining the other route/domain/topic/scope/purpose predicates; selecting it again removes the tag predicate. The selected filters are visible and explicitly clearable. Tags remain read-only; pressing a tag does not edit classification, publish media, or create a collection.
+
+The compact feed defaults to 4 cards per row. Card-size preference uses `dvl:feed-columns:v2`; an old explicitly selected 2-column layout remains 2, whereas legacy 3-column default is replaced by the new 4-column default. The user may choose 2, 3, or 4. Responsive layouts reduce columns where necessary. The original full summary/visual notes remain accessible through each card's expandable full-description control. Extra tags are hidden behind `+N tags`, never discarded.
+
+## Image-led reference card and authenticated hover preview (2026-10-13)
+
+The image-led card presentation keeps the original private R2 image URL, title, image button, selection action, tag filtering, optional original source link, and Info/Tags disclosures. Source kind, timestamp, reference ID, full stored summary and visual analysis remain visible through native expandable **Info** rather than repetitive always-visible text. Tags remain actual `/api/feed` predicates under the expandable **Tags** control. This is a presentation change only, not a mutation or omission of source evidence.
+
+On desktop pointer hover or keyboard focus of a private image button, display a larger, pointer-events-none, viewport-clamped preview using exactly the same authenticated `/api/file/private/... ` reference; do not publish R2 keys as public URLs, generate new signed public URLs, or establish paid thumbnail transforms. Pointer leave, blur, Escape and scrolling dismiss the transient preview. Clicking the underlying image button still opens the existing full-size viewer; mobile/narrow screens do not create floating mouse-only overlays. CSS respects reduced-motion preferences. This is not true reduced-payload thumbnail generation; full-size private images still load through the existing authenticated route.
+
+The actual owner's Windows Edge visual/readability qualification and unauthenticated negative browser check remain separate release gates. CI uses only synthetic images and cannot qualify the private real-image journey.
