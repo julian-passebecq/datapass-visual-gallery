@@ -182,6 +182,23 @@ try{
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
  // Tags beyond the first two are collapsed; clicking one performs a real facet search.
  const cockpit=page.locator('.reference-feed-card').filter({hasText:'Agent cockpit'});
+ // Visual-first cards hide description and tags until the owner asks for them.
+ assert.equal(await cockpit.locator('.feed-card-info-body').isVisible(),false);
+ assert.equal(await cockpit.locator('.feed-card-tag-menu .feed-card-tags').isVisible(),false);
+ const primary=cockpit.getByRole('button',{name:'Open Agent cockpit media 1'});
+ const tile=await primary.boundingBox();assert.ok(tile&&tile.height>=220,'Image-first media area is too small');
+ await primary.hover();
+ await page.locator('.feed-hover-preview').waitFor({state:'visible'});
+ const big=await page.locator('.feed-hover-preview').boundingBox();
+ assert.ok(big&&big.width>tile.width*1.2&&big.height>tile.height*1.5,'Hover image did not enlarge beyond thumbnail');
+ assert.equal(await page.locator('.feed-hover-preview img').getAttribute('src'),'/api/file/private/'+paths[0]);
+ await page.mouse.move(10,8);
+ await page.locator('.feed-hover-preview').waitFor({state:'hidden'});
+ await cockpit.locator('.feed-card-info > summary').click();
+ assert.equal(await cockpit.locator('.feed-card-info-body').isVisible(),true);
+ await cockpit.locator('.feed-card-info > summary').click();
+ await cockpit.locator('.feed-card-tag-menu > summary').click();
+ assert.equal(await cockpit.locator('.feed-card-tag-menu .feed-card-tags').isVisible(),true);
  await cockpit.getByText('+2 tags').click();
  await cockpit.getByRole('button',{name:'Filter by tag agents'}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===1);
@@ -191,11 +208,14 @@ try{
  // Narrow screen must become a single column without horizontal clipping.
  await page.setViewportSize({width:620,height:820});
  assert.equal(await columnCount(),1);
+ const mobileImage=page.getByRole('button',{name:'Open Agent cockpit media 1'});
+ await mobileImage.hover();
+ assert.equal(await page.locator('.feed-hover-preview').count(),0,'Phone-sized view must not show desktop hover overlay');
  await page.setViewportSize({width:1400,height:960});
  assert.equal(await columnCount(),4);
  await mkdir('artifacts/synthetic',{recursive:true});
  await page.screenshot({path:'artifacts/synthetic/visual-gallery.png',fullPage:false});
- console.log('PASS: Scopes root overview, clickable Mongo chips, compact default four-column feed, collapsible tags, and prior gallery journeys');
+ console.log('PASS: image-first four-column cards, authenticated hover preview, collapsible Info/Tags, facet filtering, mobile fallback and prior gallery journeys');
 }finally{
  await browser?.close();
  server.kill('SIGTERM');
