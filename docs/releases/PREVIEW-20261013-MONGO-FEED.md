@@ -118,3 +118,25 @@ Authenticated owner should press Ctrl+Shift+R on the protected preview, click an
 
 ### Owner test
 Hard refresh the authenticated preview. Click `Scopes` and inspect the new Scopes heading and value/count chips; click a scope to filter. In the feed, use **Cards per row: 4**, then choose **+N tags** on a card and click one of its tags. Verify the visible filter, its count, and **Clear filters**. Check full-description expansion and an image in the original viewer.
+
+## Owner screenshot follow-up — image-dominant cards and no-click hover preview (2026-10-13)
+
+The owner screenshot of the four-column feed showed the archived tall screenshots cramped into ~145 px media frames while repeated category, timestamp, ID, description and tag labels occupied much of the card. The user requested more screen space for images and an enlarged preview by simply hovering, without opening the zoom viewer.
+
+### Focused code and UX corrections
+- Media image region increased to roughly **258 px** at four columns on desktop (formerly ~145 px; responsive 235–305 px depending on viewport). Screenshots retain `object-fit:contain` so no source pixels are intentionally cropped.
+- Replaced repeated always-visible source kind/date/ID/context/summary with a compact image/title/actions card. Full source metadata and analyses remain accessible via native expandable **Info**; tags and their existing clickable Mongo predicates remain inside **Tags**. The optional original source action and Select control remain available. Nothing is deleted or recategorized.
+- A desktop pointer hover or keyboard focus produces a large fixed preview (maximum 510 px wide/720 px high, bounded by viewport) above the grid, using the same owner-authenticated private R2 URL. Hover also gently scales the in-card image; pointer exit/blur/Escape/scroll dismisses the preview. The preview is pointer-events-none, and clicking the card still opens the original lightbox. Small-screen/touch interaction retains click navigation.
+- No extra Cloudflare Images subscription, public R2 copy, Blob URL export, or Atlas/Cloudflare source data modification. Hover does not supply bandwidth-reducing thumbnails.
+
+### Exact code and deployment evidence
+- GitHub product runtime SHA **`b8bb2e9181fb917b7cb2631c9bce88f1e0421eb7`**, draft PR #3 based on the existing gallery PR #2 branch.
+- GitHub Actions run **#178**, run ID `38458158353`: Worker `qualify` job `115506118088` **SUCCESS** and `synthetic-browser` job `115506118356` **SUCCESS**. Synthetic Chromium asserts the increased media area, a floating preview larger than the thumbnail using the exact private route, disappearance on pointer exit, Info and Tags closed initially, tag filtering after expansion, mobile hover fallback, and preexisting import/collection/compare/viewer workflows.
+- Compiled Worker SHA-256 **`551715e85bc2f93b54d6de5c2ce0e0f6843979bcda96f7b8bdfd8fa29b163250`**, **459680 UTF-8 bytes**. The synthetic PR checkout SHA `1ccadbef894aaba0bf23900a921412cab4e7dae1` is distinct from the code SHA.
+- Owner-protected Cloudflare Worker deployment ID **`36f9d2c4-cd97-4153-9fb1-e78c9c10d11a`**; Worker version **`1b8e2587-5769-4018-96af-a72d3ba1de50`** verified **100% active** at `https://datapass-visual-gallery-preview.datapass.workers.dev/`.
+- Post-deploy verification: the same single-owner Cloudflare Access rule still protects hostname and Worker; private `datapass-media` R2, approved `datapass-web-assets` R2, private `CATALOG` KV binding and 113 Mongo-derived records remained unchanged.
+
+### Open gates
+- Owner has not yet qualified the **new version's** actual Edge hover and four-column image readability; synthetic CI is not direct desktop control. User should hard refresh the protected preview and hover a tall screenshot without clicking, try Tags/Info, and verify the existing click-to-open viewer.
+- Existing V1/other open gates remain: full reduced-byte thumbnails, automatic Mongo intake/snapshot refresh, controlled publishing, signed-out private Access/media denial in a real browser, and separately authorized Edge integration.
+- PR remains draft and unmerged; no main branch merge, no public media publication, no new paid service, no Windows qualification claim.
