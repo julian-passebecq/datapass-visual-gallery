@@ -157,7 +157,7 @@ try{
  await page.getByRole('heading',{name:'Scopes',exact:true}).waitFor();
  await page.getByRole('button',{name:'Filter Scopes by Datapass'}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
- assert.ok((await page.locator('.reference-feed-head h2').innerText()).includes('Datapass'));
+ assert.match(await page.locator('.reference-feed-head h2').innerText(),/datapass/i);
  await page.getByRole('button',{name:'Clear all category and tag filters'}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===3);
  const agentBranch=page.getByRole('button',{name:'Ai Agents',exact:true});
