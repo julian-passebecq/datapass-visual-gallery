@@ -9,4 +9,5 @@ DVG-UX-007,V1,Edge,Search capture and open from existing extension,non-destructi
 DVG-UX-008,V1,Security,Private images never exposed to anonymous user,Access token negative tests and browser network verification,NOT_QUALIFIED
 DVG-UX-009,V1,Gallery performance,Bounded pagination and lazy gallery images with future reduced-payload thumbnails,exact R2 cursor and lazy decoding passed CI85 but original bytes still transferred,PARTIAL
 DVG-UX-010,V1,Reference feed,Chronological cards with source data and linked media,Authenticated feed includes image and link references with stable IDs,IMPLEMENTED_SYNTHETIC_QUALIFIED
-DVG-UX-011,V1,Reference categories,Persistent collapsible Mongo facet navigator in gallery feed and collections,Select category from any view to switch to filtered reference feed while retaining existing library functions,IMPLEMENTED_SYNTHETIC_QUALIFIED
+DVG-UX-011,V1,Reference categories,Every axis and category is a full-width accessible clickable button,Entire row expands or filters from any app tab with real browser acceptance still open,IMPLEMENTED_SYNTHETIC_QUALIFIED
+DVG-UX-012,V1,Reference feed grid,Responsive card display with saved 2 3 4 column preference,Three cards default and one on mobile with full details still accessible,IMPLEMENTED_SYNTHETIC_QUALIFIED
