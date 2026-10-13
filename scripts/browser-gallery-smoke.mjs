@@ -145,9 +145,14 @@ try{
   await axis.click();
   assert.equal(await axis.getAttribute('aria-expanded'),initial);
  }
- await page.getByRole('button',{name:'Ai Agents',exact:true}).click();
+ const agentBranch=page.getByRole('button',{name:'Ai Agents',exact:true});
+ const wasExpanded=await agentBranch.getAttribute('aria-expanded');
+ await agentBranch.click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
- assert.equal(await page.getByRole('button',{name:'Ai Agents',exact:true}).getAttribute('aria-expanded'),'true');
+ const changed=await agentBranch.getAttribute('aria-expanded');
+ assert.notEqual(changed,wasExpanded,'Clicking category must toggle its expanded state');
+ if(changed!=='true')await agentBranch.click();
+ assert.equal(await agentBranch.getAttribute('aria-expanded'),'true');
  await page.getByRole('button',{name:'Agent Ui',exact:true}).click();
  await page.waitForFunction(()=>document.querySelectorAll('.reference-feed-card').length===2);
  await page.getByRole('button',{name:'Open Agent cockpit media 1'}).click();
