@@ -19,7 +19,7 @@ function groups(rows:RecordFacet[],field:FacetField){
  for(const r of rows)for(const v of new Set(getValues(r,field)))map.set(v,[...(map.get(v)||[]),r]);
  return [...map].map(([name,refs])=>({name,refs,count:refs.length})).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name));
 }
-export default function FeedCategoryTree({path,onSelect}:{path:FacetPath;onSelect:(path:FacetPath)=>void}){
+export default function FeedCategoryTree({path,activeAxis,onSelect,onSelectAxis}:{path:FacetPath;activeAxis:FacetField|null;onSelect:(path:FacetPath)=>void;onSelectAxis:(axis:FacetField)=>void}){
  const [index,setIndex]=useState<Taxonomy|null>(null),[error,setError]=useState(''),[term,setTerm]=useState('');
  const [open,setOpen]=useState<Set<string>>(()=>{try{
   const v=JSON.parse(localStorage.getItem('dvl:feed-tree-open:v1')||'["axis:Domains"]');
@@ -64,10 +64,13 @@ export default function FeedCategoryTree({path,onSelect}:{path:FacetPath;onSelec
   {error&&<p className="feed-tree-error" role="alert">{error}<button onClick={()=>setRevision(v=>v+1)}>Retry</button></p>}
   {!index&&!error&&<p className="feed-tree-note">Loading classifications…</p>}
   {index&&<div className="feed-tree-scroll" role="tree" aria-label="Reference categories">{AXES.map(a=>{
-   const key='axis:'+a.label,expanded=open.has(key);
-   return <div role="treeitem" aria-level={1} aria-expanded={expanded} key={key}>
-    <button type="button" className="feed-tree-axis" aria-label={a.label} aria-expanded={expanded}
-     title={(expanded?'Collapse ':'Expand ')+a.label} onClick={()=>toggle(key)}>
+   const key='axis:'+a.label,expanded=open.has(key),axis=a.fields[0];
+   const selected=activeAxis===axis&&path.length===0;
+   return <div role="treeitem" aria-level={1} aria-expanded={expanded} aria-selected={selected} key={key}>
+    <button type="button" className={'feed-tree-axis '+(selected?'selected':'')} aria-label={a.label} aria-expanded={expanded}
+     aria-current={selected?'true':undefined}
+     title={'Show '+a.label+' in feed, '+(expanded?'collapse':'expand')+' categories'}
+     onClick={()=>{toggle(key);onSelectAxis(axis)}}>
      <span className="tree-chevron" aria-hidden="true">{expanded?<ChevronDown size={15}/>:<ChevronRight size={15}/>}</span>
      <span className="tree-name">{a.label}</span>
      <span className="tree-counter" aria-hidden="true">{visible.length}</span>
