@@ -9,6 +9,7 @@ interface FeedPage {schema:string;snapshotAt:string;total:number;entries:Referen
 interface TaxonomyEntry {id:string;domains:string[];routes:string[];purposes:string[];scopes:string[];topics:string[];tags:string[]}
 interface TaxonomyResult {schema:string;entries:TaxonomyEntry[];snapshotAt:string}
 interface CategoryOption {value:string;count:number}
+interface HoverPreview {url:string;title:string;left:number;top:number;width:number;height:number}
 const ROOT_LABELS:Partial<Record<FacetField,string>>={domains:'Domains',routes:'Projects',purposes:'Purposes',scopes:'Scopes'};
 function asItem(x:Asset,title:string):MediaItem{return {id:'private:'+x.key,source:'private',key:x.key,title,mime:x.mime,url:x.url,size:0}}
 function dateLabel(value:string){const d=new Date(value);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('en',{dateStyle:'medium'}).format(d):'Date unknown'}
@@ -42,8 +43,27 @@ export default function ReferenceFeed({path,axis,query,selected,onOpen,onSelect,
  const [columns,setColumns]=useState<2|3|4>(readColumnChoice);
  const [axisCategories,setAxisCategories]=useState<CategoryOption[]>([]),[axisError,setAxisError]=useState('');
  const [showAllCategories,setShowAllCategories]=useState(false);
+ const [hoverPreview,setHoverPreview]=useState<HoverPreview|null>(null);
  const pending=useRef<AbortController|null>(null),serial=useRef(0);
  const pathKey=JSON.stringify(path);
+ // Reuse the existing private authenticated media URL; do not create a second thumbnail store.
+ const showHoverPreview=useCallback((asset:Asset,title:string,element:HTMLElement)=>{
+  if(asset.mime.startsWith('video/')||window.innerWidth<760)return;
+  const bounds=element.getBoundingClientRect(),width=Math.min(510,Math.max(300,Math.round(window.innerWidth*0.37)));
+  const height=Math.min(720,window.innerHeight-24);
+  const right=bounds.right+14+width<=window.innerWidth-12;
+  const left=right?bounds.right+14:Math.max(12,bounds.left-width-14);
+  const top=Math.max(12,Math.min(bounds.top-24,window.innerHeight-height-12));
+  setHoverPreview({url:asset.url,title,left,top,width,height});
+ },[]);
+ useEffect(()=>{
+  const hide=()=>setHoverPreview(null);
+  const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')hide()};
+  window.addEventListener('scroll',hide,true);
+  window.addEventListener('keydown',onKey);
+  return()=>{window.removeEventListener('scroll',hide,true);window.removeEventListener('keydown',onKey)};
+ },[]);
+ useEffect(()=>{setHoverPreview(null)},[pathKey,axis,query,media,order]);
 
  const load=useCallback(async(next?:string,reset=false)=>{
   pending.current?.abort();const controller=new AbortController();pending.current=controller;
@@ -86,7 +106,6 @@ export default function ReferenceFeed({path,axis,query,selected,onOpen,onSelect,
  },[axis]);
 
  const breadcrumb=path.length?path.map(x=>x.field==='tags'?'#'+x.value:human(x.value)).join(' / '):axis?(ROOT_LABELS[axis]||human(axis)):'All references';
- const hasTagFilter=path.some(x=>x.field==='tags');
  const shownAxisCategories=useMemo(()=>showAllCategories?axisCategories:axisCategories.slice(0,12),[axisCategories,showAllCategories]);
 
  return <section className="reference-feed" aria-label="MongoDB visual reference feed">
@@ -117,50 +136,71 @@ export default function ReferenceFeed({path,axis,query,selected,onOpen,onSelect,
   {error&&<div className="error" role="alert">{error} <button onClick={()=>void load(undefined,true)}>Retry</button></div>}
   {!busy&&!error&&items.length===0&&<div className="empty"><Rss size={26}/><h3>No references found</h3><p>Choose another category, tag, or clear the current filter.</p></div>}
   <div className={'reference-feed-list feed-cols-'+columns}>{items.map(ref=>{
-   const longDescription=ref.summary.length>90||Boolean(ref.visual&&ref.visual!==ref.summary);
-   const tags=[...new Set(ref.tags)];
-   const selectedTag=path.find(x=>x.field==='tags')?.value;
-   const tagButton=(value:string)=><button key={value} type="button"
-     className={'feed-card-tag '+(selectedTag===value?'active':'')}
-     aria-label={(selectedTag===value?'Remove filter for tag ':'Filter by tag ')+value}
-     aria-pressed={selectedTag===value}
-     title={'Filter references by #'+value}
-     onClick={()=>onToggleTag(value)}>#{value}</button>;
+   const tags=[...new Set(ref.tags)],selectedTag=path.find(x=>x.field==='tags')?.value;
+   const tagButton=(value:string)=><button type="button" key={value}
+    className={'feed-card-tag '+(selectedTag===value?'active':'')}
+    aria-label={(selectedTag===value?'Remove filter for tag ':'Filter by tag ')+value}
+    aria-pressed={selectedTag===value} title={'Filter references by #'+value}
+    onClick={()=>{setHoverPreview(null);onToggleTag(value)}}>#{value}</button>;
    return <div className="feed-grid-item" key={ref.id}>
     <article className="reference-feed-card">
-     <div className="feed-card-meta"><span className="feed-card-kind">{human(ref.kind)}</span><time dateTime={ref.date||undefined} title={dateLabel(ref.date)}><CalendarDays size={12}/>{dateLabel(ref.date)}</time></div>
      <div className="feed-card-layout">
-      <div className={'feed-card-media '+(ref.assets.length>1?'has-multiple':'')}>{ref.assets.length?ref.assets.slice(0,3).map((a,index)=>{
-       const entry=asItem(a,ref.title),video=a.mime.startsWith('video/');
-       return <button key={a.key} className={index===0?'feed-card-cover':'feed-card-additional'} aria-label={'Open '+ref.title+' media '+(index+1)} onClick={()=>onOpen(entry)}>
-        {video?<span className="feed-card-video"><ImageIcon size={24}/> Video reference</span>:<img src={a.url} alt={ref.title+' thumbnail '+(index+1)} loading="lazy" decoding="async"/>}
-       </button>;
-      }):<div className="feed-card-no-image"><ImageIcon size={25}/><span>Link / text reference</span></div>}</div>
+      <div className={'feed-card-media '+(ref.assets.length>1?'has-multiple':'')}>
+       {ref.assets.length?ref.assets.slice(0,3).map((asset,index)=>{
+        const item=asItem(asset,ref.title),video=asset.mime.startsWith('video/');
+        return <button key={asset.key} type="button" className={index===0?'feed-card-cover':'feed-card-additional'}
+         aria-label={'Open '+ref.title+' media '+(index+1)} title="Hover to preview · click to open"
+         onPointerEnter={e=>{if(e.pointerType!=='touch')showHoverPreview(asset,ref.title,e.currentTarget)}}
+         onPointerLeave={()=>setHoverPreview(null)}
+         onFocus={e=>showHoverPreview(asset,ref.title,e.currentTarget)}
+         onBlur={()=>setHoverPreview(null)}
+         onClick={()=>{setHoverPreview(null);onOpen(item)}}>
+         {video?<span className="feed-card-video"><ImageIcon size={24}/> Video reference</span>:
+          <img src={asset.url} alt={ref.title+' preview '+(index+1)} loading="lazy" decoding="async"/>}
+        </button>;
+       }):<div className="feed-card-no-image"><ImageIcon size={25}/><span>Link / text reference</span></div>}
+      </div>
       <div className="feed-card-content">
-       <span className="feed-card-id" title={ref.id}>{ref.id}</span>
        <h3 title={ref.title}>{ref.title}</h3>
-       {ref.summary&&<p className="feed-card-excerpt">{ref.summary}</p>}
-       {longDescription&&<details className="feed-card-more"><summary>Read full description</summary>
-        {ref.summary&&<p>{ref.summary}</p>}
-        {ref.visual&&ref.visual!==ref.summary&&<p>{ref.visual}</p>}
-       </details>}
-       {(ref.domains.length>0||ref.topics.length>0)&&<div className="feed-card-context" title={[...ref.domains,...ref.topics].join(' · ')}>{[...ref.domains.slice(0,1),...ref.topics.slice(0,1)].join(' / ')}</div>}
-       {tags.length>0&&<div className="feed-card-tags" aria-label={'Tags for '+ref.title}>
-        {tags.slice(0,2).map(tagButton)}
-        {tags.length>2&&<details className="feed-card-tag-details"><summary aria-label={'Show '+(tags.length-2)+' additional tags'}>+{tags.length-2} tags</summary>
-         <div className="feed-card-extra-tags">{tags.slice(2).map(tagButton)}</div></details>}
-       </div>}
-       {hasTagFilter&&selectedTag&&!tags.includes(selectedTag)&&<span className="feed-card-filter-warning">Tag does not match current filter</span>}
-       <div className="feed-card-actions">
-        {ref.assets[0]&&(()=>{const a=asItem(ref.assets[0],ref.title),checked=selected.has('private:'+a.key);return <button aria-label={(checked?'Deselect ':'Select ')+ref.title} onClick={()=>onSelect(a)}>{checked?<CheckSquare size={15}/>:<Square size={15}/>} {checked?'Selected':'Select image'}</button>})()}
-        {ref.sourceUrl&&<a href={ref.sourceUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={14}/> Original source</a>}
-        <span>{ref.assets.length} archived {ref.assets.length===1?'asset':'assets'}</span>
+       <div className="feed-card-compact-actions">
+        {ref.assets[0]&&(()=>{const item=asItem(ref.assets[0],ref.title),checked=selected.has('private:'+item.key);
+         return <button type="button" className="feed-card-select" aria-label={(checked?'Deselect ':'Select ')+ref.title}
+          aria-pressed={checked} onClick={()=>onSelect(item)}>{checked?<CheckSquare size={14}/>:<Square size={14}/>} {checked?'Selected':'Select'}</button>})()}
+        {tags.length>0&&<details className="feed-card-tag-menu">
+         <summary aria-label={'Show tags for '+ref.title}><Tags size={13}/> Tags ({tags.length})</summary>
+         <div className="feed-card-tags" aria-label={'Tags for '+ref.title}>
+          {tags.slice(0,2).map(tagButton)}
+          {tags.length>2&&<details className="feed-card-tag-details">
+           <summary aria-label={'Show '+(tags.length-2)+' additional tags'}>+{tags.length-2} tags</summary>
+           <div className="feed-card-extra-tags">{tags.slice(2).map(tagButton)}</div>
+          </details>}
+         </div>
+        </details>}
+        <details className="feed-card-info">
+         <summary aria-label={'Show details for '+ref.title}>Info</summary>
+         <div className="feed-card-info-body">
+          <div className="feed-card-provenance"><span>{human(ref.kind)}</span><time dateTime={ref.date||undefined}><CalendarDays size={12}/>{dateLabel(ref.date)}</time></div>
+          <span className="feed-card-id" title={ref.id}>{ref.id}</span>
+          {ref.summary&&<p>{ref.summary}</p>}
+          {ref.visual&&ref.visual!==ref.summary&&<p>{ref.visual}</p>}
+          {(ref.domains.length>0||ref.topics.length>0)&&<p className="feed-card-context">{[...ref.domains,...ref.topics].join(' / ')}</p>}
+          <span className="feed-card-archive-count">{ref.assets.length} archived {ref.assets.length===1?'asset':'assets'}</span>
+         </div>
+        </details>
+        {ref.sourceUrl&&<a className="feed-card-source" href={ref.sourceUrl} target="_blank" rel="noopener noreferrer"
+         aria-label={'Open original source for '+ref.title} title="Original source"><ExternalLink size={14}/></a>}
        </div>
       </div>
      </div>
     </article>
    </div>;
   })}</div>
+  {hoverPreview&&<div className="feed-hover-preview" role="presentation" aria-hidden="true"
+   style={{left:hoverPreview.left,top:hoverPreview.top,width:hoverPreview.width,height:hoverPreview.height}}>
+   <div className="feed-hover-preview-caption">{hoverPreview.title}</div>
+   <img src={hoverPreview.url} alt="" decoding="async"/>
+   <div className="feed-hover-preview-hint">Aperçu agrandi · cliquer sur l’image pour l’ouvrir</div>
+  </div>}
   {hasMore&&!error&&<div className="feed-page-next"><button disabled={busy} onClick={()=>void load(cursor)}>{busy?'Loading…':'Load more references'}</button></div>}
   {busy&&<p role="status" className="feed-loading">Loading references…</p>}
   {total!==null&&items.length>0&&<p className="feed-paging">Showing {items.length} of {total} references · read-only MongoDB snapshot</p>}
