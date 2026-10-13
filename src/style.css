@@ -199,3 +199,11 @@
  .shell.feed-shell .rail{align-self:stretch}
  .shell.feed-shell .feed-tree{min-height:175px}
 }
+
+/* Reserve vertical room for the explorer even on shorter desktop screens. */
+@media(min-width:901px){
+ .shell.feed-shell .rail{padding:18px 12px;gap:12px}
+ .shell.feed-shell .rail nav{gap:2px}
+ .shell.feed-shell .nav-item{padding:8px 10px;min-height:32px;font-size:12px}
+ .shell.feed-shell .rail-bottom{font-size:10px}
+}
