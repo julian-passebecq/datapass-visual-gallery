@@ -281,3 +281,70 @@
  .feed-card-media,.reference-feed-list.feed-cols-4 .feed-card-media{height:250px}
  .reference-feed-list{gap:12px}
 }
+
+
+/* Facet-root overview: selecting an axis opens its content, not only the sidebar. */
+.feed-tree-axis.selected,.feed-tree-axis[aria-current=true]{background:#244b78;color:#fff;box-shadow:inset 3px 0 0 #8cb7ff}
+.feed-axis-overview{background:#14243a;border:1px solid #324b6e;border-radius:9px;padding:10px 12px;display:flex;flex-direction:column;gap:9px}
+.feed-axis-heading{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.feed-axis-heading strong{font-size:12px;color:#deebff}
+.feed-axis-heading span,.feed-axis-loading{font-size:10px;color:#92a9c8;margin:0}
+.feed-axis-error{font-size:11px;color:#f8b5b5}
+.feed-axis-options{display:flex;gap:6px;flex-wrap:wrap;max-height:115px;overflow-y:auto;scrollbar-width:thin}
+.feed-axis-options button{display:inline-flex;align-items:center;gap:7px;background:#233b5b;border:1px solid #395779;border-radius:7px;padding:6px 8px;color:#d9e8ff;font-size:10px;cursor:pointer}
+.feed-axis-options button:hover,.feed-axis-options button:focus-visible{background:#355b89;border-color:#94baff}
+.feed-axis-options button span{color:#b8d4f6;background:#142b49;border-radius:8px;padding:1px 5px}
+.feed-axis-options button.feed-axis-showall{color:#aacaff;border-style:dashed}
+.feed-active-filter{display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid #365475;border-radius:8px;background:#172a44;color:#c7dfff;font-size:11px}
+.feed-active-filter span{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-active-filter button{display:flex;align-items:center;gap:5px;white-space:nowrap;border:1px solid #426691;background:#284773;color:#f1f6ff;border-radius:6px;padding:6px 8px;font-size:10px;cursor:pointer}
+
+/* High-density editorial feed: more images, less repetitive text and empty space. */
+.feed-shell .main{max-width:none;padding:23px clamp(14px,2vw,30px);margin:0}
+.reference-feed{gap:12px}
+.reference-feed-head h2{font-size:20px;margin:3px 0}
+.reference-feed-head>div>p:not(.reference-feed-kicker){font-size:11px}
+.reference-feed-toolbar{padding:8px 10px;gap:8px}
+.reference-feed-toolbar select{padding:6px 8px}
+.reference-feed-list{gap:10px}
+.reference-feed-list.feed-cols-4{gap:9px}
+.feed-card-layout{padding:9px;gap:8px}
+.feed-card-meta{padding:7px 9px;min-height:30px}
+.feed-card-meta time,.feed-card-meta>span:first-child{font-size:9px}
+.feed-card-id{font-size:9px;line-height:1.35}
+.feed-card-content{gap:6px}
+.feed-card-content h3{font-size:12.5px;line-height:1.35;-webkit-line-clamp:2}
+.feed-card-content .feed-card-excerpt{font-size:11px;line-height:1.35;-webkit-line-clamp:2}
+.feed-card-content .feed-card-note{display:none}
+.feed-card-media{height:165px}
+.reference-feed-list.feed-cols-2 .feed-card-media{height:230px}
+.reference-feed-list.feed-cols-4 .feed-card-media{height:145px}
+.feed-card-context{font-size:10px;color:#85a3cb;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.3}
+.feed-card-more{font-size:10px}
+.feed-card-more summary{padding:0;line-height:1.4}
+.feed-card-more[open]{padding:5px;background:#172840;border-radius:6px;max-height:180px;overflow-y:auto}
+.feed-card-more[open] p{font-size:10px;line-height:1.4;margin:4px 0;white-space:pre-wrap}
+.feed-card-tags{max-height:none;overflow:visible;display:flex;flex-wrap:wrap;gap:4px;align-items:start}
+.feed-card-tag{border:1px solid #395574;border-radius:5px;padding:3px 6px;background:#223a58;color:#a8c7f4;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;cursor:pointer}
+.feed-card-tag:hover,.feed-card-tag:focus-visible{background:#355b8a;color:#fff;outline:1px solid #9bbaff}
+.feed-card-tag.active{border-color:#78adff;background:#2c5184;color:#fff}
+.feed-card-tag-details{min-width:0;max-width:100%;font-size:9px}
+.feed-card-tag-details summary{cursor:pointer;color:#a8c8f9;padding:4px 6px;border-radius:5px;background:#1b3353;line-height:1.2;list-style:none}
+.feed-card-tag-details summary::-webkit-details-marker{display:none}
+.feed-card-tag-details summary:hover{background:#2d507b}
+.feed-card-extra-tags{display:flex;flex-wrap:wrap;gap:4px;max-height:96px;overflow:auto;padding-top:5px}
+.feed-card-filter-warning{font-size:9px;color:#e7bc78}
+.feed-card-actions{padding-top:5px;gap:4px}
+.feed-card-actions button,.feed-card-actions a{font-size:9px;padding:6px 7px}
+.feed-card-actions>span{font-size:9px}
+@media(max-width:1250px){
+ .reference-feed-list.feed-cols-4{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:930px){
+ .reference-feed-list.feed-cols-3,.reference-feed-list.feed-cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+ .reference-feed-list.feed-cols-2,.reference-feed-list.feed-cols-3,.reference-feed-list.feed-cols-4{grid-template-columns:minmax(0,1fr)}
+ .feed-card-media,.reference-feed-list.feed-cols-4 .feed-card-media{height:210px}
+ .feed-shell .main{padding:15px}
+}
