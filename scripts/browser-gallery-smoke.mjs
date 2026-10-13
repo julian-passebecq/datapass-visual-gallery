@@ -38,6 +38,18 @@ try{
     matched:q.includes('agent')?[{id:'VR-TEST-001',title:'Agent cockpit',summary:'Agent window layout',visual:'Four agent panes',tags:['multi-agent'],topics:['agents'],score:55,
     assets:[{source:'private',key:paths[0],url:'/api/file/private/'+paths[0],title:'Agent cockpit',mime:'image/png'}]}]:[]}));
   }
+  if(path==='/api/taxonomy'){
+   const entries=[['VR-TEST-001','ai-agents','agent-vscode','agent-ui'],['VR-TEST-002','ai-agents','datapass-pm','agent-ui'],['REF-TEST-003','data-engineering','datapass-bi','fabric']].map(([id,domain,route,topic])=>({id,domains:[domain],routes:[route],topics:[topic],tags:['reference'],scopes:['DATAPASS'],purposes:['REFERENCE'],hasMedia:id!=='REF-TEST-003'}));
+   return route.fulfill(json({schema:'datapass.visual-gallery.taxonomy/1',snapshotAt:'2026-10-13T08:00:00Z',count:entries.length,entries}));
+  }
+  if(path==='/api/feed'){
+   const data=[{id:'VR-TEST-001',title:'Agent cockpit',domain:'ai-agents',route:'agent-vscode',topic:'agent-ui',key:paths[0]},{id:'VR-TEST-002',title:'Architecture diagram',domain:'ai-agents',route:'datapass-pm',topic:'agent-ui',key:paths[1]},{id:'REF-TEST-003',title:'Learning article',domain:'data-engineering',route:'datapass-bi',topic:'fabric',key:null}];
+   const steps=url.searchParams.get('path')?JSON.parse(atob(url.searchParams.get('path'))):[];
+   const q=(url.searchParams.get('q')||'').toLowerCase();
+   const matched=data.filter(x=>steps.every(s=>({domains:[x.domain],routes:[x.route],topics:[x.topic],tags:['reference'],scopes:['DATAPASS'],purposes:['REFERENCE']}[s.field]||[]).includes(s.value))&&(!q||x.title.toLowerCase().includes(q))&&(url.searchParams.get('media')!=='images'||x.key));
+   const entries=matched.map(x=>({id:x.id,title:x.title,summary:'A synthetic design reference',visual:'',date:'2026-10-12T00:00:00Z',kind:x.key?'screenshot':'article',domains:[x.domain],routes:[x.route],purposes:['REFERENCE'],topics:[x.topic],tags:['reference'],assets:x.key?[{source:'private',key:x.key,url:'/api/file/private/'+x.key,title:x.title,mime:'image/png'}]:[]}));
+   return route.fulfill(json({schema:'datapass.visual-gallery.feed/1',snapshotAt:'2026-10-13T08:00:00Z',total:entries.length,entries,hasMore:false,source:'MongoDB snapshot'}));
+  }
   if(path==='/api/collections'&&method==='GET')return route.fulfill(json(state));
   if(path==='/api/collections'&&method==='PUT'){
    if(request.headers()['if-match']!==state.revision)return route.fulfill(json({error:'Concurrent update'},409));
