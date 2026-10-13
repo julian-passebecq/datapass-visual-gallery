@@ -136,7 +136,7 @@ function validPath(raw:string|null):FacetStep[]|null{
  if(raw.length>1800)return null;
  try{
   const parsed=JSON.parse(atob(raw)) as unknown;
-  if(!Array.isArray(parsed)||parsed.length>3)return null;
+  if(!Array.isArray(parsed)||parsed.length>4)return null;
   const path:FacetStep[]=[];
   for(const item of parsed){
    if(!item||typeof item!=='object')return null;
@@ -199,6 +199,9 @@ export async function referenceFeed(req:Request,env:GalleryEnv):Promise<Response
  if(!snapshot)return err('MongoDB reference snapshot unavailable',503);
  const p=new URL(req.url).searchParams;
  const path=validPath(p.get('path'));if(path===null)return err('Invalid category path',400);
+ const axisParam=p.get('axis')||'';
+ if(axisParam&&!fields.has(axisParam as FacetField))return err('Invalid category axis',400);
+ const axis=axisParam as FacetField|'';
  const rawQuery=(p.get('q')||'').trim();
  if(rawQuery.length>180)return err('Search query too long',400);
  const q=rawQuery.toLowerCase();
@@ -207,7 +210,7 @@ export async function referenceFeed(req:Request,env:GalleryEnv):Promise<Response
  const rawLimit=Number(p.get('limit')||20);
  const limit=Number.isInteger(rawLimit)?Math.max(1,Math.min(50,rawLimit)):20;
  const cursor=p.get('cursor')||'';
- const fingerprint=JSON.stringify([path,q,media,order]);
+ const fingerprint=JSON.stringify([path,q,media,order,axis]);
  let offset=0;
  if(cursor){
   if(cursor.length>2400)return err('Invalid feed cursor',400);
@@ -218,7 +221,7 @@ export async function referenceFeed(req:Request,env:GalleryEnv):Promise<Response
   }catch{return err('Feed cursor expired or filter mismatch',409)}
  }
  const filtered=snapshot.references.filter(r=>
-   onPath(r,path)&&
+   onPath(r,path)&&(!axis||strings(r[axis]).length>0)&&
    (media==='all'||Array.isArray(r.assets)&&r.assets.length>0)&&
    (!q||[r.id,r.title,r.summary,r.visual,r.search_text,
      ...strings(r.domains),...strings(r.routes),...strings(r.purposes),
@@ -232,6 +235,6 @@ export async function referenceFeed(req:Request,env:GalleryEnv):Promise<Response
  filtered.sort((a,b)=>order==='newest'?(date(b)-date(a)||a.id.localeCompare(b.id)):(date(a)-date(b)||a.id.localeCompare(b.id)));
  const next=offset+limit<filtered.length?btoa(JSON.stringify({o:offset+limit,f:fingerprint,s:snapshot.refreshed_at})):undefined;
  return response({schema:'datapass.visual-gallery.feed/1',snapshotAt:snapshot.refreshed_at,
-  source:'MongoDB read-only snapshot',total:filtered.length,
+  source:'MongoDB read-only snapshot',axis:axis||null,total:filtered.length,
   entries:filtered.slice(offset,offset+limit).map(feedItem),cursor:next,hasMore:Boolean(next)});
 }
