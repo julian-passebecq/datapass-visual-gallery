@@ -47,3 +47,38 @@ test('taxonomy rejects parameters that might cause hidden filtering',async()=>{
  assert.equal((await api.taxonomy(request('/api/taxonomy?q=irrelevant'),env)).status,400);
  assert.equal(store.size,1);
 });
+
+
+test('selecting Scopes root returns classified records and accepts only known facet axes',async()=>{
+ const extended={...snapshot,references:[...rows,{...rows[2],id:'REF-NO-SCOPE',scopes:[],tags:['orphan']}]};
+ const privateEnv={CATALOG:{async get(){return structuredClone(extended)},async put(){throw Error('No writes allowed')}}};
+ const scopes=await api.referenceFeed(request('/api/feed?axis=scopes'),privateEnv);
+ assert.equal(scopes.status,200);
+ const data=await scopes.json();
+ assert.equal(data.axis,'scopes');assert.equal(data.total,3);
+ assert.ok(data.entries.every(x=>x.id!=='REF-NO-SCOPE'));
+ assert.equal((await api.referenceFeed(request('/api/feed?axis=not-a-field'),privateEnv)).status,400);
+});
+test('tag intersections work through four nested facet levels and no matching tag returns zero',async()=>{
+ const branch=[
+  {field:'routes',value:'datapass-pm'},
+  {field:'domains',value:'ai-agents'},
+  {field:'topics',value:'agent-ui'},
+  {field:'tags',value:'cockpit'}
+ ];
+ const path=btoa(JSON.stringify(branch));
+ const result=await api.referenceFeed(request('/api/feed?path='+encodeURIComponent(path)),env);
+ assert.equal(result.status,200);
+ assert.deepEqual((await result.json()).entries.map(x=>x.id),['VR-01']);
+ const other=btoa(JSON.stringify([...branch.slice(0,3),{field:'tags',value:'graph'}]));
+ const noMatch=await api.referenceFeed(request('/api/feed?path='+encodeURIComponent(other)),env);
+ assert.equal((await noMatch.json()).total,0);
+ const invalid=btoa(JSON.stringify([...branch,{field:'scopes',value:'DATAPASS'}]));
+ assert.equal((await api.referenceFeed(request('/api/feed?path='+encodeURIComponent(invalid)),env)).status,400);
+});
+test('axis is part of cursor fingerprint and mismatched axis is rejected',async()=>{
+ const scoped=await (await api.referenceFeed(request('/api/feed?axis=scopes&limit=1'),env)).json();
+ assert.ok(scoped.cursor);
+ const reused=await api.referenceFeed(request('/api/feed?axis=domains&limit=1&cursor='+encodeURIComponent(scoped.cursor)),env);
+ assert.equal(reused.status,409);
+});
