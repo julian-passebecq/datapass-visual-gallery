@@ -46,11 +46,13 @@ export default function FeedCategoryTree({path,onSelect}:{path:FacetPath;onSelec
    const expanded=open.has(key),selected=path.length===next.length&&path.every((x,i)=>x.field===next[i].field&&x.value===next[i].value);
    const expandable=level<fields.length-1;
    return <div role="treeitem" aria-level={level+2} aria-selected={selected} aria-expanded={expandable?expanded:undefined} key={key}>
-    <div className={'feed-tree-row '+(selected?'selected':'')} style={{paddingLeft:level*12+5}}>
-     {expandable?<button className="tree-chevron" aria-label={(expanded?'Collapse ':'Expand ')+human(node.name)} onClick={()=>toggle(key)}>{expanded?<ChevronDown size={13}/>:<ChevronRight size={13}/>}</button>:<span className="tree-chevron"/>}
-     <button className="tree-name" title={human(node.name)} onClick={()=>onSelect(next)}>{human(node.name)}</button>
-     <span className="tree-counter">{node.count}</span>
-    </div>
+    <button type="button" className={'feed-tree-row '+(selected?'selected':'')} style={{paddingLeft:level*12+5}}
+     aria-label={human(node.name)} aria-expanded={expandable?expanded:undefined} title={human(node.name)}
+     onClick={()=>{onSelect(next);if(expandable)toggle(key)}}>
+     <span className="tree-chevron" aria-hidden="true">{expandable?(expanded?<ChevronDown size={14}/>:<ChevronRight size={14}/>):null}</span>
+     <span className="tree-name">{human(node.name)}</span>
+     <span className="tree-counter" aria-hidden="true">{node.count}</span>
+    </button>
     {expandable&&expanded&&<div role="group">{branch(axis,fields,node.refs,level+1,next)}</div>}
    </div>;
   });
@@ -64,8 +66,12 @@ export default function FeedCategoryTree({path,onSelect}:{path:FacetPath;onSelec
   {index&&<div className="feed-tree-scroll" role="tree" aria-label="Reference categories">{AXES.map(a=>{
    const key='axis:'+a.label,expanded=open.has(key);
    return <div role="treeitem" aria-level={1} aria-expanded={expanded} key={key}>
-    <div className="feed-tree-axis"><button className="tree-chevron" aria-label={(expanded?'Collapse ':'Expand ')+a.label} onClick={()=>toggle(key)}>{expanded?<ChevronDown size={15}/>:<ChevronRight size={15}/>}</button>
-    <button className="tree-name" onClick={()=>toggle(key)}>{a.label}</button><span className="tree-counter">{visible.length}</span></div>
+    <button type="button" className="feed-tree-axis" aria-label={a.label} aria-expanded={expanded}
+     title={(expanded?'Collapse ':'Expand ')+a.label} onClick={()=>toggle(key)}>
+     <span className="tree-chevron" aria-hidden="true">{expanded?<ChevronDown size={15}/>:<ChevronRight size={15}/>}</span>
+     <span className="tree-name">{a.label}</span>
+     <span className="tree-counter" aria-hidden="true">{visible.length}</span>
+    </button>
     {expanded&&<div role="group">{branch(a.label,a.fields,visible,0,[])}</div>}
    </div>;
   })}</div>}
